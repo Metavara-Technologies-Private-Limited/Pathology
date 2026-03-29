@@ -1,0 +1,60 @@
+name: Pathology Frontend PushTrigger
+
+on:
+  push:
+    branches:
+      - dev   
+      - main  
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Docker setup
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Build image with version tag
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg VITE_API_BASE_URL=https://dummyjson.com \
+            -f devops/Dockerfile \
+            -t ${{ secrets.DOCKER_USERNAME }}/pathology-frontend:${{ github.run_number }} \
+            .
+
+      # Tag stable
+      - name: Tag stable
+        run: |
+          docker tag ${{ secrets.DOCKER_USERNAME }}/pathology-frontend:${{ github.run_number }} \
+                     ${{ secrets.DOCKER_USERNAME }}/pathology-frontend:stable
+
+      # Push images
+      - name: Push images
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/pathology-frontend:${{ github.run_number }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/pathology-frontend:stable
+
+      # Deploy using docker-compose
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            cd /opt/apps/pathology
+            docker compose pull frontend
+            docker compose up -d frontend
