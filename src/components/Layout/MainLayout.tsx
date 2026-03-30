@@ -8,7 +8,7 @@ import styles from "../../styles/sidebar.module.css";
 const Header = lazy(() => import("./Header"));
 const Sidebar = lazy(() => import("./Sidebar"));
 const TOP_ROW_HEIGHT = 88;
-const SIDEBAR_WIDTH = 300;
+const SIDEBAR_WIDTH = 250;
 
 const MainLayout = () => {
   return (
