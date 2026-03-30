@@ -1,6 +1,6 @@
-<<<<<<< Updated upstream
+
 function ConfigurationView() {
-=======
+
 import { useState } from "react";
 import TabsHeader from "./test/CommonComponents/TabsHeader/TabsHeader";
 import PageToolbar from "./test/CommonComponents/PageToolbar/PageToolbar";
@@ -59,7 +59,7 @@ export default function ConfigurationView() {
     }
   };
 
->>>>>>> Stashed changes
+
   return (
     <div style={{ width: "100%", height: "100%" }}>
       <div className={styles.contentContainer}>
