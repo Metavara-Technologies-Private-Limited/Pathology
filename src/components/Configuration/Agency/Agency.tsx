@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import "./Agency.css";
 import { FiSearch, FiPlus } from "react-icons/fi";
@@ -30,6 +29,11 @@ const AgencyPage: React.FC = () => {
   const [agencySearch, setAgencySearch] = useState("");
   const [linkingSearch, setLinkingSearch] = useState("");
 
+  const [agencyPage, setAgencyPage] = useState(1);
+  const [linkingPage, setLinkingPage] = useState(1);
+
+  const itemsPerPage = 10;
+
   useEffect(() => {
     setLoading(true);
 
@@ -52,16 +56,14 @@ const AgencyPage: React.FC = () => {
         { id: 1, clinic: "Apollo Clinic", agencyCount: 4 },
         { id: 2, clinic: "Fortis", agencyCount: 2 },
         { id: 3, clinic: "Manipal Hospital", agencyCount: 5 },
-        { id: 3, clinic: "Manipal Hospital", agencyCount: 5 },
-        { id: 3, clinic: "Manipal Hospital", agencyCount: 5 },
-        { id: 3, clinic: "Manipal Hospital", agencyCount: 5 },
-        { id: 3, clinic: "Manipal Hospital", agencyCount: 5 },
-        { id: 3, clinic: "Manipal Hospital", agencyCount: 5 },
-        { id: 3, clinic: "Manipal Hospital", agencyCount: 5 },
-        { id: 3, clinic: "Manipal Hospital", agencyCount: 5 },
-        { id: 3, clinic: "Manipal Hospital", agencyCount: 5 },
-        { id: 3, clinic: "Manipal Hospital", agencyCount: 5 },
-        { id: 3, clinic: "Manipal Hospital", agencyCount: 5 },
+        { id: 4, clinic: "Aster Clinic", agencyCount: 3 },
+        { id: 5, clinic: "Narayana Health", agencyCount: 6 },
+        { id: 6, clinic: "Cloudnine", agencyCount: 2 },
+        { id: 7, clinic: "Columbia Asia", agencyCount: 4 },
+        { id: 8, clinic: "Sakra World", agencyCount: 3 },
+        { id: 9, clinic: "Rainbow Hospital", agencyCount: 5 },
+        { id: 10, clinic: "Motherhood", agencyCount: 2 },
+        { id: 11, clinic: "Medanta", agencyCount: 6 },
       ]);
 
       setLoading(false);
@@ -76,25 +78,33 @@ const AgencyPage: React.FC = () => {
     l.clinic.toLowerCase().includes(linkingSearch.toLowerCase())
   );
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const agencyTotalPages = Math.max(
+    1,
+    Math.ceil(filteredAgency.length / itemsPerPage)
+  );
 
-  const data = activeTab === "agency" ? filteredAgency : filteredLinking;
-  const totalPages = Math.max(1, Math.ceil(data.length / itemsPerPage));
-  const currentData = data.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+  const linkingTotalPages = Math.max(
+    1,
+    Math.ceil(filteredLinking.length / itemsPerPage)
+  );
+
+  const agencyDataPaginated = filteredAgency.slice(
+    (agencyPage - 1) * itemsPerPage,
+    agencyPage * itemsPerPage
+  );
+
+  const linkingDataPaginated = filteredLinking.slice(
+    (linkingPage - 1) * itemsPerPage,
+    linkingPage * itemsPerPage
   );
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [agencySearch, linkingSearch, activeTab]);
+    setAgencyPage(1);
+  }, [agencySearch]);
 
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [data]);
+    setLinkingPage(1);
+  }, [linkingSearch]);
 
   const toggleStatus = (id: number) => {
     setAgencyData((prev) =>
@@ -182,7 +192,10 @@ const AgencyPage: React.FC = () => {
               )}
             </div>
 
-            {currentData.map((item: any) => (
+            {(activeTab === "agency"
+              ? agencyDataPaginated
+              : linkingDataPaginated
+            ).map((item: any) => (
               <div className="table-row" key={item.id}>
                 {activeTab === "agency" ? (
                   <>
@@ -225,38 +238,90 @@ const AgencyPage: React.FC = () => {
 
           {/* Pagination */}
           <div className="footer">
-            <span>
-              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-              {Math.min(currentPage * itemsPerPage, data.length)} of {data.length}
-            </span>
+            {activeTab === "agency" ? (
+              <>
+                <span>
+                  Showing {(agencyPage - 1) * itemsPerPage + 1} to{" "}
+                  {Math.min(agencyPage * itemsPerPage, filteredAgency.length)} of{" "}
+                  {filteredAgency.length}
+                </span>
 
-            <div className="pagination">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              >
-                {"<"}
-              </button>
+                <div className="pagination">
+                  <button
+                    disabled={agencyPage === 1}
+                    onClick={() =>
+                      setAgencyPage((p) => Math.max(p - 1, 1))
+                    }
+                  >
+                    {"<"}
+                  </button>
 
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i}
-                  className={currentPage === i + 1 ? "active" : ""}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
+                  {[...Array(agencyTotalPages)].map((_, i) => (
+                    <button
+                      key={i}
+                      className={agencyPage === i + 1 ? "active" : ""}
+                      onClick={() => setAgencyPage(i + 1)}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
 
-              <button
-                disabled={currentPage === totalPages}
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(p + 1, totalPages))
-                }
-              >
-                {">"}
-              </button>
-            </div>
+                  <button
+                    disabled={agencyPage === agencyTotalPages}
+                    onClick={() =>
+                      setAgencyPage((p) =>
+                        Math.min(p + 1, agencyTotalPages)
+                      )
+                    }
+                  >
+                    {">"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <span>
+                  Showing {(linkingPage - 1) * itemsPerPage + 1} to{" "}
+                  {Math.min(
+                    linkingPage * itemsPerPage,
+                    filteredLinking.length
+                  )}{" "}
+                  of {filteredLinking.length}
+                </span>
+
+                <div className="pagination">
+                  <button
+                    disabled={linkingPage === 1}
+                    onClick={() =>
+                      setLinkingPage((p) => Math.max(p - 1, 1))
+                    }
+                  >
+                    {"<"}
+                  </button>
+
+                  {[...Array(linkingTotalPages)].map((_, i) => (
+                    <button
+                      key={i}
+                      className={linkingPage === i + 1 ? "active" : ""}
+                      onClick={() => setLinkingPage(i + 1)}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+
+                  <button
+                    disabled={linkingPage === linkingTotalPages}
+                    onClick={() =>
+                      setLinkingPage((p) =>
+                        Math.min(p + 1, linkingTotalPages)
+                      )
+                    }
+                  >
+                    {">"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </>
       )}
