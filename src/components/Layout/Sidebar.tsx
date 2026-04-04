@@ -14,12 +14,12 @@ import vidaiLogo from "../../assets/icons/Vidai-logo.svg";
 
 type SidebarProps = {
   topOffset?: number;
-  sidebarWidth?: number;
+  sidebarWidth?: number | Record<string, number>;
 };
 
 export default function Sidebar({
   topOffset = 88,
-  sidebarWidth = 300,
+  sidebarWidth = 250,
 }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,7 +42,10 @@ export default function Sidebar({
         },
       }}
     >
-      <Box className={styles.cardWrapper} sx={{ height: "100%" }}>
+      <Box
+        className={`${styles.cardWrapper} ${styles.sidebarCardWrapper}`}
+        sx={{ height: "100%" }}
+      >
         <Box className={styles.card} sx={{ height: "100%", p: 0 }}>
           <img
             src={dashboardCardBg}
@@ -152,7 +155,7 @@ export default function Sidebar({
             />
             <Typography
               variant="caption"
-              sx={{ mt: -4, mb: 2, color: "#9e9e9e" }}
+              sx={{ mt: -1, mb: 2, color: "#9e9e9e" }}
             >
               Updated Version 2.0
             </Typography>

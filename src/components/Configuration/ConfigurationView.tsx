@@ -8,4 +8,3 @@ function ConfigurationView() {
 }
 
 export default ConfigurationView;
-
