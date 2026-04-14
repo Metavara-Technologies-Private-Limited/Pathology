@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import styles from "./CreateTemplatePage.module.css";
 import CloseCircleIcon from "../../../../assets/icons/close-circle.svg";
 import BackIcon from "../../../../assets/icons/back_icon.svg";
+import undo from "../../../../assets/icons/undo.svg";
+import redo from "../../../../assets/icons/redo.svg";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -444,34 +446,10 @@ export default function CreateTemplatePage() {
                   </span>
                   <div className={styles.toolbarGroupBtns}>
                     <ToolbarBtn title="Undo" onClick={() => exec("undo")}>
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="1 4 1 10 7 10" />
-                        <path d="M3.51 15a9 9 0 1 0 .49-3.6" />
-                      </svg>
+                      <img src={undo} alt="undo" width={16} height={16} />
                     </ToolbarBtn>
                     <ToolbarBtn title="Redo" onClick={() => exec("redo")}>
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="23 4 23 10 17 10" />
-                        <path d="M20.49 15a9 9 0 1 1-.49-3.6" />
-                      </svg>
+                      <img src={redo} alt="redo" width={16} height={16} />
                     </ToolbarBtn>
 
                     <div className={styles.toolbarDivider} />
