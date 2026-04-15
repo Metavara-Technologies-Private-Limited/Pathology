@@ -8,16 +8,31 @@
 }
 
 .cardWrapper {
-  flex: 1;
-  padding: 2px 10px 10px;
+  /* base: overflow + flex; padding supplied by content/sidebar subclasses */
+  padding: 0;
+  box-sizing: border-box;
   overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+.contentCardWrapper {
+  /* Right/bottom gap scales: 12px on small → 24px on large */
+  padding: 0 clamp(12px, 1.8vw, 24px) clamp(12px, 1.8vw, 24px) 0;
+}
+
+.sidebarCardWrapper {
+  /* All-sides gap scales: 8px small → 16px large */
+  padding: 0 clamp(8px, 1.2vw, 16px) clamp(8px, 1.2vw, 16px) clamp(8px, 1.2vw, 16px);
 }
 
 .card {
   position: relative;
   height: 100%;
-  border-radius: 16px;
-  padding: 16px;
+  width: 100%;
+  margin-left: auto;
+  border-radius: 20px;
+  border: 1px solid #ececec;
   background: #ffffff;
   display: flex;
   flex-direction: column;
@@ -109,12 +124,12 @@
   position: relative;
   z-index: 1;
   flex-shrink: 0;
-  padding: 8px 12px 12px;
+  padding: 12px 16px 16px;
 }
 
 .footerLogo {
   width: 100%;
   max-width: 164px;
   height: auto;
-  margin-bottom: 40px;
+  margin-bottom: 12px;
 }

@@ -1,3 +1,5 @@
+import ArrowIcon from "../../assets/icons/Down.svg";
+
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -27,6 +29,32 @@ type HeaderUser = {
   designation_label: string;
 };
 
+type ActiveMenu = {
+  parent: string | null;
+  child: string;
+};
+
+const getActiveMenuLabel = (pathname: string): ActiveMenu => {
+    for (const item of PATHOLOGY_MENU) {
+    if (item.path === pathname) {
+      return { parent: null, child: item.label };
+    }
+
+    const activeSubMenu = item.subMenu?.find(
+      (subItem) => subItem.path === pathname,
+    );
+
+    if (activeSubMenu) {
+      return {
+        parent: item.label,
+        child: activeSubMenu.label,
+      };
+    }
+  }
+
+  return { parent: null, child: "Orders" };
+};
+
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -39,9 +67,7 @@ const Header = () => {
     { clinic_id: 1, clinic__name: "Crysta IVF, Banglore", is_default: true },
   ];
   const selectedClinic = clinics.find((c) => c.is_default) || clinics[0];
-  const activeMenuLabel =
-    PATHOLOGY_MENU.find((item) => item.path === location.pathname)?.label ||
-    "Orders";
+  const activeBreadcrumb = getActiveMenuLabel(location.pathname);
   const [clinicAnchor, setClinicAnchor] = useState<null | HTMLElement>(null);
 
   const handleClinicOpen = (e: React.MouseEvent<HTMLElement>) =>
@@ -53,9 +79,7 @@ const Header = () => {
 
   /* ================= ICON MENU STATE ================= */
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [activeMenu, setActiveMenu] = useState<
-    "calendar" | null
-  >(null);
+  const [activeMenu, setActiveMenu] = useState<"calendar" | null>(null);
 
   const handleIconClick = (
     event: React.MouseEvent<HTMLElement>,
@@ -79,9 +103,7 @@ const Header = () => {
     navigate("/login", { replace: true });
   };
 
-  const iconMenus = [
-    { icon: CalendarIcon, type: "calendar" },
-  ] as const;
+  const iconMenus = [{ icon: CalendarIcon, type: "calendar" }] as const;
 
   return (
     <AppBar
@@ -96,16 +118,31 @@ const Header = () => {
     >
       <Toolbar sx={{ justifyContent: "space-between", py: 2 }}>
         {/* LEFT: Breadcrumbs */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
-          <Typography sx={{ color: "#666", fontSize: 14 }}>Lab</Typography>
-          <Typography sx={{ color: "#8a8a8a", fontSize: 14 }}>&gt;</Typography>
-          <Typography sx={{ color: "#666", fontSize: 14 }}>
-            Pathology
-          </Typography>
-          <Typography sx={{ color: "#8a8a8a", fontSize: 14 }}>&gt;</Typography>
-          <Typography sx={{ color: "#1f1f1f", fontSize: 14, fontWeight: 700 }}>
-            {activeMenuLabel}
-          </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
+
+
+        <Typography sx={{ color: "#666" }}>Pathology</Typography>
+
+{/* ALWAYS show arrow after Pathology */}
+<Box component="img" src={ArrowIcon} sx={{ width: 12, height: 12 }} />
+
+{/* Show parent if exists */}
+{activeBreadcrumb.parent && (
+  <>
+    <Typography sx={{ color: "#666" }}>
+      {activeBreadcrumb.parent}
+    </Typography>
+
+    <Box component="img" src={ArrowIcon} sx={{ width: 12, height: 12 }} />
+  </>
+)}
+
+{/* Always show child */}
+<Typography sx={{ color: "#1f1f1f", fontSize: 18, fontWeight: 700 }}>
+  {activeBreadcrumb.child}
+</Typography>
+
+
         </Box>
 
         {/* RIGHT */}
