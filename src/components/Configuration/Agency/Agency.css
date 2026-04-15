@@ -3,9 +3,10 @@
   padding: 20px;
   border-radius: 12px;
   font-family: "Inter", sans-serif;
+  font-size: 13px;
 }
 
-/* Tabs */
+
 .tabs {
   display: flex;
   border-bottom: 2px solid #eee;
@@ -23,7 +24,7 @@
   border-bottom: 2px solid #ff5a3c;
 }
 
-/* Header */
+
 .header-row {
   display: flex;
   justify-content: space-between;
@@ -50,7 +51,7 @@
   outline: none;
 }
 
-/* Button */
+
 .add-btn {
   background: #4a4a4a;
   color: #fff;
@@ -63,7 +64,7 @@
   cursor: pointer;
 }
 
-/* Table */
+
 .table {
   background: #fff;
   border-radius: 10px;
@@ -88,7 +89,6 @@
   border-top: 1px solid #eee;
 }
 
-/* Status */
 .status-cell {
   display: flex;
   align-items: center;
@@ -105,7 +105,6 @@
   color: #1d4ed8;
 }
 
-/* Toggle */
 .switch {
   position: relative;
   width: 36px;
@@ -146,32 +145,10 @@ input:checked + .slider:before {
   transform: translateX(16px);
 }
 
-/* Footer */
-.footer {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 12px;
-}
-
-.pagination span {
-  margin: 0 6px;
-  cursor: pointer;
-}
-
-.pagination .active {
-  background: #333;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 6px;
-}
-
-/* 🔥 NEW EDIT BUTTON DESIGN */
 .edit-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 15px;
+  height: 15px;
   border: none;
-  background: #eef2ff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -181,18 +158,10 @@ input:checked + .slider:before {
 
 .edit-btn svg {
   color: #4f46e5;
-  font-size: 16px;
+  font-size: 0px;
 }
 
-.edit-btn:hover {
-  background: #ff5a3c;
-}
 
-.edit-btn:hover svg {
-  color: #fff;
-}
-
-/* Pagination fix */
 .pagination button {
   margin: 0 4px;
   padding: 4px 8px;
@@ -209,5 +178,54 @@ input:checked + .slider:before {
 
 .pagination button:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+.footer {
+  display: flex;
+  align-items: center;
+  margin-top: 16px;
+}
+
+
+.page-info {
+  font-size: 13px;
+  color: #666;
+}
+
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+
+.page-btn,
+.nav-btn {
+  border: none;
+  background: #f1f3f5;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.page-btn:hover,
+.nav-btn:hover {
+  background: #e2e6ea;
+}
+
+.page-btn.active {
+  background: black;
+  color: #fff;
+  font-weight: 500;
+}
+
+.nav-btn:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
