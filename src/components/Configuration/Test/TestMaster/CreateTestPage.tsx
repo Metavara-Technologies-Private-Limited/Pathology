@@ -623,7 +623,12 @@ export default function CreateTestPage() {
                       className={styles.chipRemove}
                       onClick={() => toggleTemplate(t.id)}
                     >
-                      ✕
+                      <img
+                        src={CloseCircleIcon}
+                        alt="remove"
+                        width={16}
+                        height={16}
+                      />
                     </button>
                   </span>
                 ))}
