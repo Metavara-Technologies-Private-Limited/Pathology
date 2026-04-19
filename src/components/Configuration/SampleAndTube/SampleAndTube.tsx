@@ -134,7 +134,7 @@ const styles = {
   },
   th: {
     textAlign: "left" as const,
-    fontSize: "12px",
+    fontSize: "14px",
     color: "#7d828b",
     fontWeight: 600,
     padding: "12px 14px",
