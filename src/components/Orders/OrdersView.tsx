@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import styles from "./OrdersView.module.css";
 import FilterIcon from "../../assets/icons/filter.svg";
 import SearchIcon from "../../assets/icons/search.png";
+import ViewOrderDetails from "./ViewOrderDetails";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -664,6 +665,7 @@ export default function OrdersView() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
 
   const [filters, setFilters] = useState<FilterValues>({
     fromDate: "",
@@ -722,6 +724,15 @@ export default function OrdersView() {
     setActiveTab(tab);
     setPage(1);
   };
+
+  if (selectedOrder) {
+    return (
+      <ViewOrderDetails
+        order={selectedOrder}
+        onBack={() => setSelectedOrder(null)}
+      />
+    );
+  }
 
   return (
     <div className={styles.wrapper}>
@@ -836,7 +847,10 @@ export default function OrdersView() {
                     <StatusBadge status={row.orderStatus} />
                   </td>
                   <td style={{ textAlign: "right", paddingRight: "1em" }}>
-                    <button className={styles.viewBtn} title="View Order">
+                    <button
+                      className={styles.viewBtn}
+                      onClick={() => setSelectedOrder(row)} // ← add this
+                    >
                       <svg
                         width="18"
                         height="18"
