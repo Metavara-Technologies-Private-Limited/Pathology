@@ -5,8 +5,8 @@ import TopSection from "../components/Authorization/TopSection";
 import TableSection from "../components/Authorization/TableSection";
 import { AuthorizationItem } from "../types/index";
 import "../styles/Authorization/AuthorizationPage.css";
+import ResultDetails from "../components/Authorization/ResultDetails";
 
-/* ✅ ADD DATA HERE */
 const mockData: AuthorizationItem[] = [
   {
     id: "1",
@@ -45,6 +45,7 @@ const mockData: AuthorizationItem[] = [
 const AuthorizationPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
   const [search, setSearch] = useState("");
+  const [showResult, setShowResult] = useState(false); // ✅ MOVED HERE
 
   const filteredData: AuthorizationItem[] = mockData.filter((item) =>
     item.patient.name.toLowerCase().includes(search.toLowerCase())
@@ -52,14 +53,23 @@ const AuthorizationPage: React.FC = () => {
 
   return (
     <div className="container">
-      <TopSection
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        search={search}
-        setSearch={setSearch}
-      />
+      {showResult ? (
+        <ResultDetails onBack={() => setShowResult(false)} />
+      ) : (
+        <>
+          <TopSection
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            search={search}
+            setSearch={setSearch}
+          />
 
-      <TableSection data={filteredData} />
+          <TableSection
+            data={filteredData}
+            onViewResult={() => setShowResult(true)}
+          />
+        </>
+      )}
     </div>
   );
 };
