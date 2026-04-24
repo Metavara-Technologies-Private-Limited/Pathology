@@ -1,0 +1,131 @@
+.result-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+/* Header */
+.result-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.back-btn {
+    border: none;
+    background: #eee;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* Patient Card */
+.patient-card {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+
+.patient-card img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+}
+
+.patient-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    width: 100%;
+}
+
+.patient-grid label {
+    font-size: 12px;
+    color: #888;
+}
+
+.patient-grid p {
+    font-weight: 500;
+}
+
+/* Tabs */
+.result-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.result-tabs button {
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    background: #f5f5f5;
+}
+
+.result-tabs .active {
+    border-color: #ff5a3c;
+    color: #ff5a3c;
+    background: #fff0ed;
+}
+
+/* Table */
+.result-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.result-table th,
+.result-table td {
+    padding: 12px;
+    border-top: 1px solid #eee;
+    font-size: 13px;
+}
+
+/* Badges */
+.badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+.normal {
+    color: green;
+    background: #e6f7ec;
+}
+
+.abnormal {
+    color: #a67c00;
+    background: #fff6d6;
+}
+
+.reflex {
+    color: orange;
+    background: #fff0e6;
+}
+
+.panic {
+    color: red;
+    background: #ffe6e6;
+}
+
+.improbable {
+    color: red;
+    background: #ffecec;
+}
+
+.success {
+    color: green;
+    background: #e6f7ec;
+}
+
+/* Footer */
+.result-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    font-size: 13px;
+}

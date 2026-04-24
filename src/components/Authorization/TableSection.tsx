@@ -4,9 +4,10 @@ import "../../styles/Authorization/TableSection.css";
 
 type Props = {
     data: AuthorizationItem[];
+    onViewResult: () => void;   // ✅ ADD THIS
 };
 
-const TableSection: React.FC<Props> = ({ data }) => {
+const TableSection: React.FC<Props> = ({ data, onViewResult }) => {
     return (
         <>
             <table className="table">
@@ -50,7 +51,7 @@ const TableSection: React.FC<Props> = ({ data }) => {
                             <td>{item.orders}</td>
 
                             <td>
-                                <button className="icon-btn">📄</button>
+                                <button className="icon-btn" onClick={onViewResult}>📄</button>
                             </td>
                         </tr>
                     ))}
