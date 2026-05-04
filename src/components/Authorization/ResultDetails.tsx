@@ -1,5 +1,6 @@
 import React from "react";
 import "../../styles/Authorization/ResultDetails.css";
+import backIcon from "../Authorization/Icons/back-icon.png";
 
 type Props = {
     onBack: () => void;
@@ -11,7 +12,7 @@ const ResultDetails: React.FC<Props> = ({ onBack }) => {
             {/* Top Header */}
             <div className="result-header">
                 <button className="back-btn" onClick={onBack}>
-                    ←
+                    <img src={backIcon} alt="back" className="back-icon" />
                 </button>
                 <h2>View Result Details</h2>
             </div>

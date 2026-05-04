@@ -1,5 +1,3 @@
-// import AuthorizationView from "../components/Authorization/AuthorizationView";
-
 import React, { useState } from "react";
 import TopSection from "../components/Authorization/TopSection";
 import TableSection from "../components/Authorization/TableSection";
