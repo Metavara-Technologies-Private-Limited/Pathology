@@ -1,6 +1,7 @@
 import React from "react";
 import { AuthorizationItem } from "../../types/index";
 import "../../styles/Authorization/TableSection.css";
+import resultIcon from "../Authorization/Icons/resultIcon.png";
 
 type Props = {
     data: AuthorizationItem[];
@@ -51,7 +52,9 @@ const TableSection: React.FC<Props> = ({ data, onViewResult }) => {
                             <td>{item.orders}</td>
 
                             <td>
-                                <button className="icon-btn" onClick={onViewResult}>📄</button>
+                                <button className="icon-btn" onClick={onViewResult}>
+                                    <img src={resultIcon} alt="result" className="icon-img" />
+                                </button>
                             </td>
                         </tr>
                     ))}
