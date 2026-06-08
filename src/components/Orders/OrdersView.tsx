@@ -1,85 +1,23 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch } from "../../store";
+import { fetchOrders, selectOrders, selectOrdersLoading, setSelectedOrder, selectSelectedOrder, clearSelectedOrder } from "../../store/orders.slice";
 import styles from "./OrdersView.module.css";
 import FilterIcon from "../../assets/icons/filter.svg";
 import SearchIcon from "../../assets/icons/search.png";
-import Calendar from "../../assets/icons/calendar2.svg";
 import ViewOrderDetails from "./ViewOrderDetails";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+import type { OrderRow, OrderFilters } from "../../types/orders.types";
 
-type OrderStatus = "Pending" | "Partial" | "Complete";
-type PatientType = "Walk-In" | "Registered";
 type TabKey = "all" | "inhouse" | "outsource";
 
-type OrderRow = {
-  id: string;
-  date: string;
-  time: string;
-  patientName: string;
-  patientAge: number;
-  mrn: string;
-  gender: string;
-  patientType: PatientType;
-  doctorName: string;
-  billNo: string;
-  netAmt: number;
-  billStatus: "Paid" | "Unpaid";
-  totalTests: number;
-  orderStatus: OrderStatus;
-  type: "inhouse" | "outsource";
-};
-
-type FilterValues = {
-  fromDate: string;
-  toDate: string;
-  doctor: string;
-  orderStatus: string;
-  patientType: string;
-};
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const DOCTORS = [
-  "",
-  "Dr. Emilia Clarke",
-  "Dr. Olivia Bennett",
-  "Dr. Lucas Harper",
-  "Dr. Mia Thompson",
-  "Dr. Ethan Carter",
-  "Dr. Ava Johnson",
-  "Dr. Noah Smith",
-];
 const ORDER_STATUSES = ["", "Pending", "Partial", "Complete"];
-const PATIENT_TYPES = ["", "Walk-In", "Registered"];
-
-const ALL_ORDERS: OrderRow[] = [
-  { id: "o1",  date: "04/02/2024", time: "10:30 AM", patientName: "Emilia Williamson",  patientAge: 27, mrn: "PCC-1719", gender: "Female", patientType: "Walk-In",    doctorName: "Dr. Emilia Clarke",  billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 16, orderStatus: "Pending",  type: "inhouse"   },
-  { id: "o2",  date: "04/02/2024", time: "10:30 AM", patientName: "Olivia Anderson",    patientAge: 29, mrn: "PCC-1719", gender: "Female", patientType: "Registered", doctorName: "Dr. Olivia Bennett", billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 16, orderStatus: "Pending",  type: "inhouse"   },
-  { id: "o3",  date: "04/02/2024", time: "10:30 AM", patientName: "Mia Thompson",       patientAge: 32, mrn: "PCC-1719", gender: "Female", patientType: "Registered", doctorName: "Dr. Lucas Harper",   billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 16, orderStatus: "Partial",  type: "inhouse"   },
-  { id: "o4",  date: "04/02/2024", time: "10:30 AM", patientName: "Isabella Martinez",  patientAge: 33, mrn: "PCC-1719", gender: "Female", patientType: "Walk-In",    doctorName: "Dr. Mia Thompson",   billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 16, orderStatus: "Partial",  type: "inhouse"   },
-  { id: "o5",  date: "04/02/2024", time: "10:30 AM", patientName: "Sophia Wilson",      patientAge: 34, mrn: "PCC-1719", gender: "Female", patientType: "Registered", doctorName: "Dr. Ethan Carter",   billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 5,  orderStatus: "Complete", type: "inhouse"   },
-  { id: "o6",  date: "04/02/2024", time: "10:30 AM", patientName: "Charlotte Anderson", patientAge: 28, mrn: "PCC-1719", gender: "Female", patientType: "Walk-In",    doctorName: "Dr. Ava Johnson",    billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 5,  orderStatus: "Complete", type: "inhouse"   },
-  { id: "o7",  date: "04/02/2024", time: "10:30 AM", patientName: "Ava Wilson",         patientAge: 31, mrn: "PCC-1719", gender: "Female", patientType: "Walk-In",    doctorName: "Dr. Noah Smith",     billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 5,  orderStatus: "Complete", type: "inhouse"   },
-  { id: "o8",  date: "04/02/2024", time: "10:30 AM", patientName: "Olivia Anderson",    patientAge: 29, mrn: "PCC-1719", gender: "Female", patientType: "Registered", doctorName: "Dr. Olivia Bennett", billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 5,  orderStatus: "Complete", type: "inhouse"   },
-  { id: "o9",  date: "04/02/2024", time: "10:30 AM", patientName: "Olivia Anderson",    patientAge: 29, mrn: "PCC-1719", gender: "Female", patientType: "Registered", doctorName: "Dr. Olivia Bennett", billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 5,  orderStatus: "Complete", type: "inhouse"   },
-  { id: "o10", date: "04/02/2024", time: "10:30 AM", patientName: "Emilia Williamson",  patientAge: 27, mrn: "PCC-1719", gender: "Female", patientType: "Walk-In",    doctorName: "Dr. Emilia Clarke",  billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 9,  orderStatus: "Pending",  type: "outsource" },
-  { id: "o11", date: "04/02/2024", time: "10:30 AM", patientName: "Olivia Anderson",    patientAge: 29, mrn: "PCC-1719", gender: "Female", patientType: "Registered", doctorName: "Dr. Olivia Bennett", billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 9,  orderStatus: "Pending",  type: "outsource" },
-  { id: "o12", date: "04/02/2024", time: "10:30 AM", patientName: "Mia Thompson",       patientAge: 32, mrn: "PCC-1719", gender: "Female", patientType: "Registered", doctorName: "Dr. Lucas Harper",   billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 9,  orderStatus: "Partial",  type: "outsource" },
-  { id: "o13", date: "04/02/2024", time: "10:30 AM", patientName: "Isabella Martinez",  patientAge: 33, mrn: "PCC-1719", gender: "Female", patientType: "Walk-In",    doctorName: "Dr. Mia Thompson",   billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 9,  orderStatus: "Partial",  type: "outsource" },
-  { id: "o14", date: "04/02/2024", time: "10:30 AM", patientName: "Sophia Wilson",      patientAge: 34, mrn: "PCC-1719", gender: "Female", patientType: "Registered", doctorName: "Dr. Ethan Carter",   billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 2,  orderStatus: "Complete", type: "outsource" },
-  { id: "o15", date: "04/02/2024", time: "10:30 AM", patientName: "Charlotte Anderson", patientAge: 28, mrn: "PCC-1719", gender: "Female", patientType: "Walk-In",    doctorName: "Dr. Ava Johnson",    billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 2,  orderStatus: "Complete", type: "outsource" },
-  { id: "o16", date: "04/02/2024", time: "10:30 AM", patientName: "Ava Wilson",         patientAge: 31, mrn: "PCC-1719", gender: "Female", patientType: "Walk-In",    doctorName: "Dr. Noah Smith",     billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 2,  orderStatus: "Complete", type: "outsource" },
-  { id: "o17", date: "04/02/2024", time: "10:30 AM", patientName: "Ava Wilson",         patientAge: 31, mrn: "PCC-1719", gender: "Female", patientType: "Walk-In",    doctorName: "Dr. Noah Smith",     billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 2,  orderStatus: "Complete", type: "outsource" },
-  { id: "o18", date: "04/02/2024", time: "10:30 AM", patientName: "Ava Wilson",         patientAge: 31, mrn: "PCC-1719", gender: "Female", patientType: "Walk-In",    doctorName: "Dr. Noah Smith",     billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 2,  orderStatus: "Complete", type: "outsource" },
-  { id: "o19", date: "04/02/2024", time: "10:30 AM", patientName: "Ava Wilson",         patientAge: 31, mrn: "PCC-1719", gender: "Female", patientType: "Walk-In",    doctorName: "Dr. Noah Smith",     billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 2,  orderStatus: "Complete", type: "outsource" },
-  { id: "o20", date: "04/02/2024", time: "10:30 AM", patientName: "Ava Wilson",         patientAge: 31, mrn: "PCC-1719", gender: "Female", patientType: "Walk-In",    doctorName: "Dr. Noah Smith",     billNo: "PCC/25/OP/000134", netAmt: 5463, billStatus: "Paid", totalTests: 2,  orderStatus: "Complete", type: "outsource" },
-];
-
-const PAGE_SIZE = 10;
+const PATIENT_TYPES  = ["", "Walk-In", "Registered"];
+const PAGE_SIZE      = 10;
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: OrderStatus }) {
+function StatusBadge({ status }: { status: OrderRow["orderStatus"] }) {
   return (
     <span className={`${styles.badge} ${styles[`badge${status}`]}`}>
       {status}
@@ -89,7 +27,7 @@ function StatusBadge({ status }: { status: OrderStatus }) {
 
 // ─── Bill Details Tooltip ─────────────────────────────────────────────────────
 
-function BillTooltip({ billNo, netAmt, billStatus }: { billNo: string; netAmt: number; billStatus: "Paid" | "Unpaid" }) {
+function BillTooltip({ billNo, netAmt, billStatus }: { billNo: string; netAmt: number; billStatus: OrderRow["billStatus"] }) {
   const [show, setShow] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -105,7 +43,7 @@ function BillTooltip({ billNo, netAmt, billStatus }: { billNo: string; netAmt: n
     <div className={styles.billWrapper} ref={ref}>
       <span className={styles.billNo}>
         <button className={styles.billInfoBtn} onClick={() => setShow((s) => !s)}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9e9e9e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E17C64" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -117,7 +55,7 @@ function BillTooltip({ billNo, netAmt, billStatus }: { billNo: string; netAmt: n
         <div className={styles.billTooltip}>
           <div className={styles.billTooltipRow}>
             <span className={styles.billTooltipLabel}>Net Amt.</span>
-            <span className={styles.billTooltipValue}>${netAmt.toLocaleString()}.0</span>
+            <span className={styles.billTooltipValue}>₹{netAmt.toLocaleString()}</span>
           </div>
           <div className={styles.billTooltipRow}>
             <span className={styles.billTooltipLabel}>Status</span>
@@ -131,97 +69,79 @@ function BillTooltip({ billNo, netAmt, billStatus }: { billNo: string; netAmt: n
 
 // ─── Filter Modal ─────────────────────────────────────────────────────────────
 
-function FilterModal({ isOpen, onClose, onApply, onClear, values, onChange }: {
+function FilterModal({ isOpen, onClose, onApply, onClear, values, onChange, doctors }: {
   isOpen: boolean;
   onClose: () => void;
   onApply: () => void;
   onClear: () => void;
-  values: FilterValues;
-  onChange: (f: FilterValues) => void;
+  values: OrderFilters;
+  onChange: (f: OrderFilters) => void;
+  doctors: string[];
 }) {
   if (!isOpen) return null;
 
-  const set = (field: keyof FilterValues, v: string) =>
+  const set = (field: keyof OrderFilters, v: string) =>
     onChange({ ...values, [field]: v });
-
-  const ChevronIcon = () => (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
-      <path fill="#9e9e9e" d="M6 8L1 3h10z" />
-    </svg>
-  );
 
   return (
     <div className={styles.filterOverlay} onClick={onClose}>
       <div className={styles.filterModal} onClick={(e) => e.stopPropagation()}>
-
-        {/* Header */}
         <div className={styles.filterHeader}>
           <span className={styles.filterTitle}>Filters</span>
           <button className={styles.filterClose} onClick={onClose}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <line x1="1" y1="1" x2="11" y2="11" stroke="#505050" strokeWidth="2" strokeLinecap="round" />
-              <line x1="11" y1="1" x2="1" y2="11" stroke="#505050" strokeWidth="2" strokeLinecap="round" />
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <line x1="1" y1="1" x2="9" y2="9" stroke="#505050" strokeWidth="1.8" strokeLinecap="round" />
+              <line x1="9" y1="1" x2="1" y2="9" stroke="#505050" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
           </button>
         </div>
 
-        {/* Body */}
         <div className={styles.filterBody}>
-
-          {/* Row 1: From Date + To Date */}
           <div className={styles.filterGrid2}>
             <div className={styles.floatBorder}>
               <span className={styles.floatLabel}>From Date</span>
               <div className={styles.floatInputRow}>
-                <input className={styles.floatInput} type="text" value={values.fromDate} onChange={(e) => set("fromDate", e.target.value)} placeholder="DD/MM/YYYY" />
-                <img src={Calendar} alt="" width={16} height={16} style={{ flexShrink: 0 }} />
+                <input className={styles.floatInput} type="date" value={values.fromDate} onChange={(e) => set("fromDate", e.target.value)} />
               </div>
             </div>
             <div className={styles.floatBorder}>
               <span className={styles.floatLabel}>To Date</span>
               <div className={styles.floatInputRow}>
-                <input className={styles.floatInput} type="text" value={values.toDate} onChange={(e) => set("toDate", e.target.value)} placeholder="DD/MM/YYYY" />
-                <img src={Calendar} alt="" width={16} height={16} style={{ flexShrink: 0 }} />
+                <input className={styles.floatInput} type="date" value={values.toDate} onChange={(e) => set("toDate", e.target.value)} />
               </div>
             </div>
           </div>
 
-          {/* Row 2: Doctor + Order Status */}
           <div className={styles.filterGrid2}>
             <div className={styles.floatBorder}>
               <span className={styles.floatLabel}>Doctor</span>
               <div className={styles.floatInputRow}>
                 <select className={styles.floatSelect} value={values.doctor} onChange={(e) => set("doctor", e.target.value)}>
-                  {DOCTORS.map((d) => <option key={d} value={d}>{d || "Select"}</option>)}
+                  <option value="">All</option>
+                  {doctors.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
-                <ChevronIcon />
               </div>
             </div>
             <div className={styles.floatBorder}>
               <span className={styles.floatLabel}>Order Status</span>
               <div className={styles.floatInputRow}>
                 <select className={styles.floatSelect} value={values.orderStatus} onChange={(e) => set("orderStatus", e.target.value)}>
-                  {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s || "Select"}</option>)}
+                  {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s || "All"}</option>)}
                 </select>
-                <ChevronIcon />
               </div>
             </div>
           </div>
 
-          {/* Row 3: Patient Type — full width */}
           <div className={styles.floatBorder}>
             <span className={styles.floatLabel}>Patient Type</span>
             <div className={styles.floatInputRow}>
               <select className={styles.floatSelect} value={values.patientType} onChange={(e) => set("patientType", e.target.value)}>
-                {PATIENT_TYPES.map((t) => <option key={t} value={t}>{t || "Select"}</option>)}
+                {PATIENT_TYPES.map((t) => <option key={t} value={t}>{t || "All"}</option>)}
               </select>
-              <ChevronIcon />
             </div>
           </div>
-
         </div>
 
-        {/* Footer */}
         <div className={styles.filterFooter}>
           <button className={styles.filterClearBtn} onClick={onClear}>Clear All</button>
           <button className={styles.filterApplyBtn} onClick={() => { onApply(); onClose(); }}>Apply</button>
@@ -234,20 +154,32 @@ function FilterModal({ isOpen, onClose, onApply, onClear, values, onChange }: {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function OrdersView() {
-  const [activeTab, setActiveTab] = useState<TabKey>("all");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
+  const dispatch      = useDispatch<AppDispatch>();
+  const orders        = useSelector(selectOrders);
+  const loading       = useSelector(selectOrdersLoading);
+  const selectedOrder = useSelector(selectSelectedOrder);
 
-  const [filters, setFilters] = useState<FilterValues>({ fromDate: "", toDate: "", doctor: "", orderStatus: "", patientType: "" });
-  const [appliedFilters, setAppliedFilters] = useState<FilterValues>({ fromDate: "", toDate: "", doctor: "", orderStatus: "", patientType: "" });
+  const [activeTab, setActiveTab]           = useState<TabKey>("all");
+  const [search, setSearch]                 = useState("");
+  const [page, setPage]                     = useState(1);
+  const [filterOpen, setFilterOpen]         = useState(false);
+
+  const emptyFilters: OrderFilters = { fromDate: "", toDate: "", doctor: "", orderStatus: "", patientType: "" };
+  const [filters, setFilters]               = useState<OrderFilters>(emptyFilters);
+  const [appliedFilters, setAppliedFilters] = useState<OrderFilters>(emptyFilters);
+
+  useEffect(() => { dispatch(fetchOrders()); }, [dispatch]);
+
+  const doctors = useMemo(() =>
+    [...new Set(orders.map((o) => o.doctorName).filter(Boolean))],
+    [orders]
+  );
 
   const tabFiltered = useMemo(() => {
-    if (activeTab === "inhouse")   return ALL_ORDERS.filter((o) => o.type === "inhouse");
-    if (activeTab === "outsource") return ALL_ORDERS.filter((o) => o.type === "outsource");
-    return ALL_ORDERS;
-  }, [activeTab]);
+    if (activeTab === "inhouse")   return orders.filter((o) => o.type === "inhouse");
+    if (activeTab === "outsource") return orders.filter((o) => o.type === "outsource");
+    return orders;
+  }, [activeTab, orders]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -260,21 +192,49 @@ export default function OrdersView() {
     });
   }, [tabFiltered, search, appliedFilters]);
 
-  const totalPages    = Math.ceil(filtered.length / PAGE_SIZE);
-  const pageRows      = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const inhouseCount  = ALL_ORDERS.filter((o) => o.type === "inhouse").length;
-  const outsourceCount= ALL_ORDERS.filter((o) => o.type === "outsource").length;
+  const totalPages     = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+  const safePage       = Math.min(page, totalPages);
+  const pageRows       = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const inhouseCount   = orders.filter((o) => o.type === "inhouse").length;
+  const outsourceCount = orders.filter((o) => o.type === "outsource").length;
 
   const handleTabChange = (tab: TabKey) => { setActiveTab(tab); setPage(1); };
 
+  // Pagination page numbers — show max 5, centered around current
+  const pageNumbers = useMemo(() => {
+    const total = totalPages;
+    if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+    const start = Math.max(1, Math.min(safePage - 2, total - 4));
+    return Array.from({ length: 5 }, (_, i) => start + i);
+  }, [totalPages, safePage]);
+
+  const startEntry = filtered.length > 0 ? (safePage - 1) * PAGE_SIZE + 1 : 0;
+  const endEntry   = Math.min(safePage * PAGE_SIZE, filtered.length);
+
   if (selectedOrder) {
-    return <ViewOrderDetails order={selectedOrder} onBack={() => setSelectedOrder(null)} />;
+    return (
+      <ViewOrderDetails
+        order={{
+          patientName: selectedOrder.patientName,
+          patientAge:  selectedOrder.patientAge,
+          gender:      selectedOrder.gender,
+          mrn:         selectedOrder.mrn,
+          orderId:     selectedOrder.orderId,
+        }}
+        orderId={selectedOrder.orderId}
+        onBack={() => dispatch(clearSelectedOrder())}
+      />
+    );
+  }
+
+  if (loading) {
+    return <div className={styles.wrapper} style={{ padding: "2rem", color: "#9ca3af" }}>Loading orders...</div>;
   }
 
   return (
     <div className={styles.wrapper}>
 
-      {/* ── Toolbar ─────────────────────────────────────────────────────── */}
+      {/* ── Toolbar ── */}
       <div className={styles.toolbar}>
         <h2 className={styles.title}>List of Work Orders ({filtered.length})</h2>
         <div className={styles.actions}>
@@ -293,7 +253,7 @@ export default function OrdersView() {
         </div>
       </div>
 
-      {/* ── Tab Pills ───────────────────────────────────────────────────── */}
+      {/* ── Tab Pills ── */}
       <div className={styles.tabRow}>
         {(["all", "inhouse", "outsource"] as TabKey[]).map((tab) => (
           <button
@@ -301,88 +261,124 @@ export default function OrdersView() {
             className={`${styles.tabPill} ${activeTab === tab ? styles.tabPillActive : ""}`}
             onClick={() => handleTabChange(tab)}
           >
-            {tab === "all" ? `All Orders (${ALL_ORDERS.length})` : tab === "inhouse" ? `Inhouse (${inhouseCount})` : `Outsource (${outsourceCount})`}
+            {tab === "all"
+              ? `All Orders (${orders.length})`
+              : tab === "inhouse"
+              ? `Inhouse (${inhouseCount})`
+              : `Outsource (${outsourceCount})`}
           </button>
         ))}
       </div>
 
-      {/* ── Table ───────────────────────────────────────────────────────── */}
+      {/* ── Table — only real rows, no empty fillers ── */}
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
           <thead className={styles.head}>
             <tr>
               <th style={{ width: "13%" }}>Order Date | Time</th>
-              <th style={{ width: "20%" }}>Patient</th>
+              <th style={{ width: "19%" }}>Patient</th>
               <th style={{ width: "10%" }}>Patient Type</th>
               <th style={{ width: "14%" }}>Doctor Name</th>
-              <th style={{ width: "16%" }}>Bill Details</th>
-              <th style={{ width: "8%"  }}>Total Tests</th>
+              <th style={{ width: "18%" }}>Bill Details</th>
+              <th style={{ width: "8%", textAlign: "center" }}>Total Tests</th>
               <th style={{ width: "12%", textAlign: "right" }}>Order Status</th>
-              <th style={{ width: "7%"  }}></th>
+              <th style={{ width: "6%" }}></th>
             </tr>
           </thead>
           <tbody className={styles.scrollBody}>
-            {Array.from({ length: PAGE_SIZE }, (_, i) => {
-              const row = pageRows[i];
-              return row ? (
-                <tr key={row.id} className={styles.row}>
-                  <td>
-                    <div className={styles.dateCell}>
-                      <span className={styles.dateText}>{row.date}</span>
-                      <span className={styles.timeText}>{row.time}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className={styles.patientCell}>
-                      <span className={styles.patientName}>{row.patientName} | {row.patientAge}</span>
-                      <span className={styles.patientSub}>{row.mrn} | {row.gender}</span>
-                    </div>
-                  </td>
-                  <td>{row.patientType}</td>
-                  <td>{row.doctorName}</td>
-                  <td>
-                    <BillTooltip billNo={row.billNo} netAmt={row.netAmt} billStatus={row.billStatus} />
-                  </td>
-                  <td>{row.totalTests}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <StatusBadge status={row.orderStatus} />
-                  </td>
-                  <td style={{ textAlign: "right", paddingRight: "1em" }}>
-                    <button className={styles.viewBtn} onClick={() => setSelectedOrder(row)}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9e9e9e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="3" />
-                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ) : (
-                <tr key={`empty-${i}`} className={styles.row}>
-                  {Array.from({ length: 8 }, (_, j) => <td key={j} />)}
-                </tr>
-              );
-            })}
+            {pageRows.length > 0 ? pageRows.map((row) => (
+              <tr key={row.id} className={styles.row}>
+
+                <td>
+                  <div className={styles.dateCell}>
+                    <span className={styles.dateText}>{row.date}</span>
+                    <span className={styles.timeText}>{row.time}</span>
+                  </div>
+                </td>
+
+                <td>
+                  <div className={styles.patientCell}>
+                    <span className={styles.patientName}>{row.patientName} | {row.patientAge}</span>
+                    <span className={styles.patientSub}>{row.mrn} | {row.gender}</span>
+                  </div>
+                </td>
+
+                <td style={{ color: "#111827", fontSize: "12px" }}>{row.patientType}</td>
+                <td style={{ color: "#111827", fontSize: "12px" }}>{row.doctorName}</td>
+
+                <td>
+                  <BillTooltip billNo={row.billNo} netAmt={row.netAmt} billStatus={row.billStatus} />
+                </td>
+
+                <td style={{ textAlign: "center", color: "#111827", fontSize: "12px" }}>{row.totalTests}</td>
+
+                <td style={{ textAlign: "right" }}>
+                  <StatusBadge status={row.orderStatus} />
+                </td>
+
+                <td style={{ textAlign: "center" }}>
+                  <button className={styles.viewBtn} onClick={() => dispatch(setSelectedOrder(row))}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5A8AEA" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" />
+                    </svg>
+                  </button>
+                </td>
+
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan={8} style={{ textAlign: "center", padding: "2rem", color: "#9ca3af", fontSize: "13px" }}>
+                  No matching records found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* ── Footer / Pagination ─────────────────────────────────────────── */}
+      {/* ── Footer / Pagination ── */}
       <div className={styles.footer}>
         <span>
-          Showing {(page - 1) * PAGE_SIZE + 1} to {Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} entries
+          Showing {startEntry} to {endEntry} of {filtered.length} entries
         </span>
         <div className={styles.pagination}>
-          <button className={styles.pageBtn} disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+          {/* Prev */}
+          <button className={styles.pageBtn} disabled={safePage === 1} onClick={() => setPage((p) => p - 1)}>
             <svg width="7" height="11" viewBox="0 0 7 11" fill="none">
               <path d="M6 1L1 5.5L6 10" stroke="#505050" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
-            <button key={p} className={`${styles.pageNumBtn} ${p === page ? styles.pageNumActive : ""}`} onClick={() => setPage(p)}>
+
+          {/* First page + ellipsis if needed */}
+          {pageNumbers[0] > 1 && (
+            <>
+              <button className={`${styles.pageNumBtn} ${safePage === 1 ? styles.pageNumActive : ""}`} onClick={() => setPage(1)}>1</button>
+              {pageNumbers[0] > 2 && <span style={{ color: "#9ca3af", padding: "0 4px" }}>…</span>}
+            </>
+          )}
+
+          {/* Page number buttons */}
+          {pageNumbers.map((p) => (
+            <button
+              key={p}
+              className={`${styles.pageNumBtn} ${p === safePage ? styles.pageNumActive : ""}`}
+              onClick={() => setPage(p)}
+            >
               {p}
             </button>
           ))}
-          <button className={styles.pageBtn} disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
+
+          {/* Last page + ellipsis if needed */}
+          {pageNumbers[pageNumbers.length - 1] < totalPages && (
+            <>
+              {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && <span style={{ color: "#9ca3af", padding: "0 4px" }}>…</span>}
+              <button className={`${styles.pageNumBtn} ${safePage === totalPages ? styles.pageNumActive : ""}`} onClick={() => setPage(totalPages)}>{totalPages}</button>
+            </>
+          )}
+
+          {/* Next */}
+          <button className={styles.pageBtn} disabled={safePage === totalPages} onClick={() => setPage((p) => p + 1)}>
             <svg width="7" height="11" viewBox="0 0 7 11" fill="none">
               <path d="M1 1L6 5.5L1 10" stroke="#505050" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -390,18 +386,15 @@ export default function OrdersView() {
         </div>
       </div>
 
-      {/* ── Filter Modal ─────────────────────────────────────────────────── */}
+      {/* ── Filter Modal ── */}
       <FilterModal
         isOpen={filterOpen}
         onClose={() => setFilterOpen(false)}
         onApply={() => setAppliedFilters(filters)}
-        onClear={() => {
-          const empty = { fromDate: "", toDate: "", doctor: "", orderStatus: "", patientType: "" };
-          setFilters(empty);
-          setAppliedFilters(empty);
-        }}
+        onClear={() => { setFilters(emptyFilters); setAppliedFilters(emptyFilters); }}
         values={filters}
         onChange={setFilters}
+        doctors={doctors}
       />
     </div>
   );

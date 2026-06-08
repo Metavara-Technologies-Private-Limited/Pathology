@@ -12,24 +12,24 @@ import { http } from "./http";
 
 export const parameterApi = {
   // ── Parameters ─────────────────────────────────────
-  getParameters: () => http.get("/parameters/"),
+  getParameters: () => http.get("/parameters/?page_size=100"),
 
   createParameter: (payload: CreateParameterPayload) =>
     http.post("/parameters/", payload),
 
   updateParameter: ({ id, ...payload }: UpdateParameterPayload) =>
-    http.put(`/parameters/${id}/`, payload),
+  http.put(`/parameters/${id}/`, payload),
 
-  updateParameterStatus: (id: number, status: boolean) =>
-    http.put(`/parameters/${id}/`, { status }),
+  updateParameterStatus: (id: string, status: boolean) =>
+  http.put(`/parameters/${id}/`, { status }),
 
-  deleteParameter: (id: number) => http.delete(`/parameters/${id}/`),
+  deleteParameter: (id: string) => http.delete(`/parameters/${id}/`),
 
   // ── Reference Ranges ───────────────────────────────
-  getReferenceRanges: (parameterId?: number) =>
-    parameterId
-      ? http.get(`/parameter-reference-ranges/?parameter=${parameterId}`)
-      : http.get("/parameter-reference-ranges/"),
+  getReferenceRanges: (parameterId?: string) =>
+  parameterId
+    ? http.get(`/parameter-reference-ranges/?parameter=${parameterId}`)
+    : http.get("/parameter-reference-ranges/"),
 
   createReferenceRange: (payload: CreateReferenceRangePayload) =>
     http.post("/parameter-reference-ranges/", payload),
