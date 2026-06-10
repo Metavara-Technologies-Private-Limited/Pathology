@@ -2,24 +2,17 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CloseIcon from "@mui/icons-material/Close";
-import type { SampleRow } from "./ReceiveMockData";
+import type { ReceiveSample } from "../../services/receive.api";
 
 type RejectSpecimenModalProps = {
   isOpen: boolean;
-  rows: SampleRow[];
+  rows: ReceiveSample[];
   onClose: () => void;
   onConfirm: () => void;
 };
 
-function RejectSpecimenModal({
-  isOpen,
-  rows,
-  onClose,
-  onConfirm,
-}: RejectSpecimenModalProps) {
-  if (!isOpen) {
-    return null;
-  }
+function RejectSpecimenModal({ isOpen, rows, onClose, onConfirm }: RejectSpecimenModalProps) {
+  if (!isOpen) return null;
 
   return (
     <div className="receive-modal-overlay" role="presentation" onClick={onClose}>
@@ -32,12 +25,7 @@ function RejectSpecimenModal({
       >
         <div className="receive-modal-header">
           <h3>Reject Specimen</h3>
-          <button
-            type="button"
-            className="receive-modal-close"
-            onClick={onClose}
-            aria-label="Close reject specimen modal"
-          >
+          <button type="button" className="receive-modal-close" onClick={onClose} aria-label="Close reject specimen modal">
             <CloseIcon fontSize="small" />
           </button>
         </div>
@@ -97,30 +85,26 @@ function RejectSpecimenModal({
               {rows.map((row) => (
                 <tr key={row.id}>
                   <td>
-                    <div className="cell-primary">{row.shipDate}</div>
-                    <div className="cell-secondary">{row.shipTime}</div>
+                    <div className="cell-primary">{row.ship_date}</div>
+                    <div className="cell-secondary">{row.ship_time}</div>
                   </td>
                   <td>
-                    <div className="cell-primary">{row.shipmentNo}</div>
+                    <div className="cell-primary">{row.shipment_no}</div>
                   </td>
                   <td>
-                    <div className="cell-primary">{row.sampleNo}</div>
-                    <div className="cell-secondary">{row.type}</div>
+                    <div className="cell-primary">{row.specimen_no}</div>
+                    <div className="cell-secondary">{row.specimen_type}</div>
                   </td>
                   <td>
-                    <div className="cell-primary">{row.testCode}</div>
-                    <div className="cell-secondary">{row.testName}</div>
+                    <div className="cell-primary">{row.test_code}</div>
+                    <div className="cell-secondary">{row.test_name}</div>
                   </td>
                   <td>
-                    <div className="cell-primary">{row.serviceName}</div>
+                    <div className="cell-primary">{row.service_name}</div>
                   </td>
                   <td>
-                    <div className="patient-primary">
-                      {row.patientName} | {row.age}
-                    </div>
-                    <div className="patient-secondary">
-                      {row.patientCode} | {row.gender}
-                    </div>
+                    <div className="patient-primary">{row.patient_name} | {row.patient_age}</div>
+                    <div className="patient-secondary">{row.patient_code} | {row.patient_gender}</div>
                   </td>
                 </tr>
               ))}
@@ -129,12 +113,8 @@ function RejectSpecimenModal({
         </div>
 
         <div className="receive-modal-actions">
-          <button type="button" className="receive-modal-cancel" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="button" className="receive-modal-confirm" onClick={onConfirm}>
-            Reject
-          </button>
+          <button type="button" className="receive-modal-cancel" onClick={onClose}>Cancel</button>
+          <button type="button" className="receive-modal-confirm" onClick={onConfirm}>Reject</button>
         </div>
       </div>
     </div>

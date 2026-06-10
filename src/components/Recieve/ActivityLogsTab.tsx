@@ -1,38 +1,9 @@
 import PrintOutlinedIcon from "@mui/icons-material/PrintOutlined";
-import type { SampleRow } from "./ReceiveMockData";
+import type { ReceiveSample } from "../../services/receive.api";
 
-type ActivityLogsTabProps = {
-  rows: SampleRow[];
-  rowOffset: number;
-};
+type ActivityLogsTabProps = { rows: ReceiveSample[] };
 
-export const ACTIVITY_SHIP_BY = [
-  "Jordan Blake",
-  "Taylor Reed",
-  "Morgan Lee",
-  "Casey Quinn",
-  "Riley Morgan",
-  "Jamie Parker",
-  "Skylar James",
-  "Avery Taylor",
-  "Drew Jordan",
-  "Kai Morgan",
-];
-
-export const ACTIVITY_RECEIVED_BY = [
-  "Jordan Blake",
-  "Taylor Morgan",
-  "Riley Quinn",
-  "Casey Jordan",
-  "Jamie Lee",
-  "Skylar Reed",
-  "Morgan Taylor",
-  "Avery James",
-  "Drew Quinn",
-  "Kai Jordan",
-];
-
-function ActivityLogsTab({ rows, rowOffset }: ActivityLogsTabProps) {
+function ActivityLogsTab({ rows }: ActivityLogsTabProps) {
   return (
     <table className="receive-table">
       <thead>
@@ -48,54 +19,34 @@ function ActivityLogsTab({ rows, rowOffset }: ActivityLogsTabProps) {
           <th className="info-column" />
         </tr>
       </thead>
-
       <tbody>
-        {rows.map((row, index) => {
-          const activityIndex = (rowOffset + index) % ACTIVITY_SHIP_BY.length;
-
-          return (
+        {rows.map((row) => (
           <tr key={row.id}>
             <td>
-              <div className="cell-primary">{row.shipDate}</div>
-              <div className="cell-secondary">{row.shipTime}</div>
+              <div className="cell-primary">{row.ship_date}</div>
+              <div className="cell-secondary">{row.ship_time}</div>
             </td>
+            <td><div className="cell-primary">{row.shipment_no}</div></td>
             <td>
-              <div className="cell-primary">{row.shipmentNo}</div>
+              <div className="cell-primary">{row.receive_date ?? "—"}</div>
+              <div className="cell-secondary">{row.receive_time ?? "—"}</div>
             </td>
+            <td><div className="cell-primary">{row.shipment_no}</div></td>
             <td>
-              <div className="cell-primary">{row.shipDate}</div>
-              <div className="cell-secondary">{row.shipTime}</div>
+              <div className="cell-primary">—</div>
+              <div className="cell-secondary">—</div>
             </td>
-            <td>
-              <div className="cell-primary">{row.shipmentNo}</div>
-            </td>
-            <td>
-              <div className="cell-primary">Vidai, Pune</div>
-              <div className="cell-secondary">Fertivue, Pune</div>
-            </td>
-            <td>
-              <div className="cell-primary">{ACTIVITY_SHIP_BY[activityIndex]}</div>
-            </td>
-            <td>
-              <div className="cell-primary">Fertivue, Pune</div>
-            </td>
-            <td>
-              <div className="cell-primary">{ACTIVITY_RECEIVED_BY[activityIndex]}</div>
-            </td>
+            <td><div className="cell-primary">—</div></td>
+            <td><div className="cell-primary">—</div></td>
+            <td><div className="cell-primary">{row.accepted_by ?? "—"}</div></td>
             <td className="info-column">
               <PrintOutlinedIcon className="print-icon" fontSize="small" />
             </td>
           </tr>
-          );
-        })}
-
-        {rows.length === 0 ? (
-          <tr>
-            <td colSpan={9} className="empty-row">
-              No matching records found.
-            </td>
-          </tr>
-        ) : null}
+        ))}
+        {rows.length === 0 && (
+          <tr><td colSpan={9} className="empty-row">No matching records found.</td></tr>
+        )}
       </tbody>
     </table>
   );

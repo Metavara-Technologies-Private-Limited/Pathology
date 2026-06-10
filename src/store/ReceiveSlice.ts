@@ -1,20 +1,28 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type {
-  CreateReceiveSamplePayload,
   ReceiveSampleItem,
   ReceiveSamplePayload,
-  ReceiveState,
   RejectSamplePayload,
+  ReceiveState,
+  CreateReceiveSamplePayload,
 } from "../types/Receive.types";
 import type { RootState } from ".";
-import { receiveApi } from "../services/Receive.api";
+import {
+  getAllSamples,
+  getActivityLogSamples,
+  receiveSample as apiReceiveSample,
+  rejectSample as apiRejectSample,
+  createSample,
+  deleteSample,
+} from "../services/receive.api";
 
 // =====================================================
 // Raw API response shape (snake_case from Django)
 // =====================================================
 interface RawReceiveSample {
   id: number;
-  shipment_received: number | null;
+  shipment_received?: number | null;
+  shipment?: number | null;
   ship_date: string;
   ship_time: string;
   shipment_no: string;
@@ -44,7 +52,7 @@ interface RawReceiveSample {
 function mapRaw(item: RawReceiveSample): ReceiveSampleItem {
   return {
     id: item.id,
-    shipmentReceived: item.shipment_received,
+    shipmentReceived: item.shipment_received ?? item.shipment ?? null,
     shipDate: item.ship_date,
     shipTime: item.ship_time,
     shipmentNo: item.shipment_no,
@@ -102,11 +110,27 @@ export const fetchReceiveSamples = createAsyncThunk(
   "receive/fetchSamples",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await receiveApi.getSamples();
-      return res.data as RawReceiveSample[];
+      // getAllSamples already returns ReceiveSample[] directly
+      const data = await getAllSamples();
+      return data as RawReceiveSample[];
     } catch (error: any) {
       return rejectWithValue(
         extractErrorMessage(error.response?.data) ?? "Failed to fetch samples",
+      );
+    }
+  },
+);
+
+export const fetchActivityLogs = createAsyncThunk(
+  "receive/fetchActivityLogs",
+  async (_, { rejectWithValue }) => {
+    try {
+      // getActivityLogSamples already returns ReceiveSample[] directly
+      const data = await getActivityLogSamples();
+      return data as RawReceiveSample[];
+    } catch (error: any) {
+      return rejectWithValue(
+        extractErrorMessage(error.response?.data) ?? "Failed to fetch activity logs",
       );
     }
   },
@@ -116,9 +140,9 @@ export const createReceiveSample = createAsyncThunk(
   "receive/createSample",
   async (payload: CreateReceiveSamplePayload, { dispatch, rejectWithValue }) => {
     try {
-      const res = await receiveApi.createSample(payload);
+      const res = await createSample(payload);
       await dispatch(fetchReceiveSamples());
-      return res.data as RawReceiveSample;
+      return res.data;
     } catch (error: any) {
       return rejectWithValue(
         extractErrorMessage(error.response?.data) ?? "Failed to create sample",
@@ -130,14 +154,14 @@ export const createReceiveSample = createAsyncThunk(
 export const receiveSample = createAsyncThunk(
   "receive/receiveSample",
   async (
-    { sampleId, payload }: { sampleId: number; payload: ReceiveSamplePayload },
+    { sampleId, payload: _payload }: { sampleId: number; payload?: ReceiveSamplePayload },
     { dispatch, rejectWithValue },
   ) => {
     try {
-      const res = await receiveApi.receiveSample(sampleId, payload);
+      await apiReceiveSample(sampleId);
       await dispatch(fetchReceiveSamples());
       await dispatch(fetchActivityLogs());
-      return res.data;
+      return;
     } catch (error: any) {
       return rejectWithValue(
         extractErrorMessage(error.response?.data) ?? "Failed to receive sample",
@@ -149,31 +173,17 @@ export const receiveSample = createAsyncThunk(
 export const rejectSample = createAsyncThunk(
   "receive/rejectSample",
   async (
-    { sampleId, payload }: { sampleId: number; payload: RejectSamplePayload },
+    { sampleId, payload: _payload }: { sampleId: number; payload?: RejectSamplePayload },
     { dispatch, rejectWithValue },
   ) => {
     try {
-      const res = await receiveApi.rejectSample(sampleId, payload);
+      await apiRejectSample(sampleId);
       await dispatch(fetchReceiveSamples());
       await dispatch(fetchActivityLogs());
-      return res.data;
+      return;
     } catch (error: any) {
       return rejectWithValue(
         extractErrorMessage(error.response?.data) ?? "Failed to reject sample",
-      );
-    }
-  },
-);
-
-export const fetchActivityLogs = createAsyncThunk(
-  "receive/fetchActivityLogs",
-  async (_, { rejectWithValue }) => {
-    try {
-      const res = await receiveApi.getActivityLogs();
-      return res.data as RawReceiveSample[];
-    } catch (error: any) {
-      return rejectWithValue(
-        extractErrorMessage(error.response?.data) ?? "Failed to fetch activity logs",
       );
     }
   },
@@ -183,7 +193,7 @@ export const deleteReceiveSample = createAsyncThunk(
   "receive/deleteSample",
   async (sampleId: number, { dispatch, rejectWithValue }) => {
     try {
-      await receiveApi.deleteSample(sampleId);
+      await deleteSample(sampleId);
       await dispatch(fetchReceiveSamples());
     } catch (error: any) {
       return rejectWithValue(

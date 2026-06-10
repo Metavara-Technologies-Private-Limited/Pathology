@@ -1,13 +1,10 @@
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import type { SampleRow } from "./ReceiveMockData";
+import type { ReceiveSample } from "../../services/receive.api";
 
-type RejectedTabProps = {
-  rows: SampleRow[];
-  rowOffset: number;
-};
+type RejectedTabProps = { rows: ReceiveSample[] };
 
-function RejectedTab({ rows, rowOffset }: RejectedTabProps) {
+function RejectedTab({ rows }: RejectedTabProps) {
   return (
     <table className="receive-table">
       <thead>
@@ -22,80 +19,48 @@ function RejectedTab({ rows, rowOffset }: RejectedTabProps) {
           <th className="info-column" />
         </tr>
       </thead>
-
       <tbody>
-        {rows.map((row, rowIndex) => {
-          const resendFlag = (rowOffset + rowIndex) % 4 !== 2 && (rowOffset + rowIndex) % 5 !== 3;
-
-          return (
-            <tr key={row.id}>
-              <td>
-                <div className="cell-primary">{row.shipDate}</div>
-                <div className="cell-secondary">{row.shipTime}</div>
-              </td>
-              <td>
-                <div className="cell-primary">{row.shipmentNo}</div>
-              </td>
-              <td>
-                <div className="cell-primary">{row.sampleNo}</div>
-                <div className="cell-secondary">{row.type}</div>
-              </td>
-              <td>
-                <div className="cell-primary">{row.testCode}</div>
-                <div className="cell-secondary">{row.testName}</div>
-              </td>
-              <td>
-                <div className="cell-primary">{row.serviceName}</div>
-              </td>
-              <td>
-                <div className="patient-primary">
-                  {row.patientName} | {row.age}
-                </div>
-                <div className="patient-secondary">
-                  {row.patientCode} | {row.gender}
-                </div>
-              </td>
-              <td>
-                {resendFlag ? <CheckCircleOutlineIcon className="resend-icon" fontSize="small" /> : null}
-              </td>
-              <td className="info-column">
-                <span className="info-hover-target">
-                  <ErrorOutlineIcon className="warning-icon" fontSize="small" />
-                  <span className="info-hover-card" role="tooltip">
-                    <span className="info-hover-row">
-                      <span>Order Date & Time</span>
-                      <strong>
-                        {row.shipDate} | {row.shipTime}
-                      </strong>
-                    </span>
-                    <span className="info-hover-row">
-                      <span>Ship Date & Time</span>
-                      <strong>
-                        {row.shipDate} | {row.shipTime}
-                      </strong>
-                    </span>
-                    <span className="info-hover-row">
-                      <span>Shipment No.</span>
-                      <strong>{row.shipmentNo}</strong>
-                    </span>
-                    <span className="info-hover-row">
-                      <span>Reject Remark</span>
-                      <strong>Sample is damaged or clotted</strong>
-                    </span>
-                  </span>
+        {rows.map((row) => (
+          <tr key={row.id}>
+            <td>
+              <div className="cell-primary">{row.ship_date}</div>
+              <div className="cell-secondary">{row.ship_time}</div>
+            </td>
+            <td><div className="cell-primary">{row.shipment_no}</div></td>
+            <td>
+              <div className="cell-primary">{row.specimen_no}</div>
+              <div className="cell-secondary">{row.specimen_type}</div>
+            </td>
+            <td>
+              <div className="cell-primary">{row.test_code}</div>
+              <div className="cell-secondary">{row.test_name}</div>
+            </td>
+            <td><div className="cell-primary">{row.service_name}</div></td>
+            <td>
+              <div className="patient-primary">{row.patient_name} | {row.patient_age}</div>
+              <div className="patient-secondary">{row.patient_code} | {row.patient_gender}</div>
+            </td>
+            <td>
+              {row.sub_optimal
+                ? <CheckCircleOutlineIcon className="resend-icon" fontSize="small" />
+                : null}
+            </td>
+            <td className="info-column">
+              <span className="info-hover-target">
+                <ErrorOutlineIcon className="warning-icon" fontSize="small" />
+                <span className="info-hover-card" role="tooltip">
+                  <span className="info-hover-row"><span>Order Date & Time</span><strong>{row.ship_date} | {row.ship_time}</strong></span>
+                  <span className="info-hover-row"><span>Ship Date & Time</span><strong>{row.ship_date} | {row.ship_time}</strong></span>
+                  <span className="info-hover-row"><span>Shipment No.</span><strong>{row.shipment_no}</strong></span>
+                  <span className="info-hover-row"><span>Reject Remark</span><strong>{row.remark ?? "—"}</strong></span>
                 </span>
-              </td>
-            </tr>
-          );
-        })}
-
-        {rows.length === 0 ? (
-          <tr>
-            <td colSpan={8} className="empty-row">
-              No matching records found.
+              </span>
             </td>
           </tr>
-        ) : null}
+        ))}
+        {rows.length === 0 && (
+          <tr><td colSpan={8} className="empty-row">No matching records found.</td></tr>
+        )}
       </tbody>
     </table>
   );

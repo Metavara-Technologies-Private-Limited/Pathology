@@ -58,7 +58,7 @@ export interface CreateReceiveSamplePayload {
   patient_gender: string;
   patient_code: string;
   shipment_received?: number | null;
-  status?: string;
+  status?: "Shipped" | "Received" | "Rejected";
 }
 
 export interface ReceiveSamplePayload {

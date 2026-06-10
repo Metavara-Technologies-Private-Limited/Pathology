@@ -1,14 +1,11 @@
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
-import type { SampleRow } from "./ReceiveMockData";
+import type { ReceiveSample } from "../../services/receive.api";
 
-type ReceivedTabProps = {
-  rows: SampleRow[];
-  rowOffset: number;
-};
+type ReceivedTabProps = { rows: ReceiveSample[] };
 
-function ReceivedTab({ rows, rowOffset }: ReceivedTabProps) {
+function ReceivedTab({ rows }: ReceivedTabProps) {
   return (
     <table className="receive-table">
       <thead>
@@ -24,38 +21,28 @@ function ReceivedTab({ rows, rowOffset }: ReceivedTabProps) {
           <th className="info-column" />
         </tr>
       </thead>
-
       <tbody>
-        {rows.map((row, rowIndex) => {
-          const isPending = rowOffset + rowIndex < 3;
-
+        {rows.map((row) => {
+          const isPending = !row.receive_date || !row.receive_time;
           return (
             <tr key={row.id}>
               <td>
-                <div className="cell-primary">{row.shipDate}</div>
-                <div className="cell-secondary">{row.shipTime}</div>
+                <div className="cell-primary">{row.receive_date ?? row.ship_date}</div>
+                <div className="cell-secondary">{row.receive_time ?? row.ship_time}</div>
+              </td>
+              <td><div className="cell-primary">{row.shipment_no}</div></td>
+              <td>
+                <div className="cell-primary">{row.specimen_no}</div>
+                <div className="cell-secondary">{row.specimen_type}</div>
               </td>
               <td>
-                <div className="cell-primary">{row.shipmentNo}</div>
+                <div className="cell-primary">{row.test_code}</div>
+                <div className="cell-secondary">{row.test_name}</div>
               </td>
+              <td><div className="cell-primary">{row.service_name}</div></td>
               <td>
-                <div className="cell-primary">{row.sampleNo}</div>
-                <div className="cell-secondary">{row.type}</div>
-              </td>
-              <td>
-                <div className="cell-primary">{row.testCode}</div>
-                <div className="cell-secondary">{row.testName}</div>
-              </td>
-              <td>
-                <div className="cell-primary">{row.serviceName}</div>
-              </td>
-              <td>
-                <div className="patient-primary">
-                  {row.patientName} | {row.age}
-                </div>
-                <div className="patient-secondary">
-                  {row.patientCode} | {row.gender}
-                </div>
+                <div className="patient-primary">{row.patient_name} | {row.patient_age}</div>
+                <div className="patient-secondary">{row.patient_code} | {row.patient_gender}</div>
               </td>
               <td>
                 <span className={`result-status-pill ${isPending ? "pending" : "complete"}`}>
@@ -63,50 +50,27 @@ function ReceivedTab({ rows, rowOffset }: ReceivedTabProps) {
                 </span>
               </td>
               <td>
-                {isPending ? (
-                  <AddCircleOutlineIcon className="result-icon" fontSize="small" />
-                ) : (
-                  <DescriptionOutlinedIcon className="result-icon" fontSize="small" />
-                )}
+                {isPending
+                  ? <AddCircleOutlineIcon className="result-icon" fontSize="small" />
+                  : <DescriptionOutlinedIcon className="result-icon" fontSize="small" />}
               </td>
               <td className="info-column">
                 <span className="info-hover-target">
                   <ErrorOutlineIcon className="warning-icon" fontSize="small" />
                   <span className="info-hover-card" role="tooltip">
-                    <span className="info-hover-row">
-                      <span>Order Date & Time</span>
-                      <strong>
-                        {row.shipDate} | {row.shipTime}
-                      </strong>
-                    </span>
-                    <span className="info-hover-row">
-                      <span>Ship Date & Time</span>
-                      <strong>
-                        {row.shipDate} | {row.shipTime}
-                      </strong>
-                    </span>
-                    <span className="info-hover-row">
-                      <span>Shipment No.</span>
-                      <strong>{row.shipmentNo}</strong>
-                    </span>
-                    <span className="info-hover-row">
-                      <span>Receive Remark</span>
-                      <strong>Sample is collected in the correct container</strong>
-                    </span>
+                    <span className="info-hover-row"><span>Order Date & Time</span><strong>{row.ship_date} | {row.ship_time}</strong></span>
+                    <span className="info-hover-row"><span>Ship Date & Time</span><strong>{row.ship_date} | {row.ship_time}</strong></span>
+                    <span className="info-hover-row"><span>Shipment No.</span><strong>{row.shipment_no}</strong></span>
+                    <span className="info-hover-row"><span>Receive Remark</span><strong>{row.remark ?? "—"}</strong></span>
                   </span>
                 </span>
               </td>
             </tr>
           );
         })}
-
-        {rows.length === 0 ? (
-          <tr>
-            <td colSpan={9} className="empty-row">
-              No matching records found.
-            </td>
-          </tr>
-        ) : null}
+        {rows.length === 0 && (
+          <tr><td colSpan={9} className="empty-row">No matching records found.</td></tr>
+        )}
       </tbody>
     </table>
   );
