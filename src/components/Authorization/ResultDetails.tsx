@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import { FiRefreshCw } from "react-icons/fi";
 import "../../styles/Authorization/ResultDetails.css";
 import backIcon from "../Authorization/Icons/back-icon.png";
 import { AuthorizationItem } from "../../types";
@@ -7,6 +8,10 @@ import {
   approveAuthorization,
   rejectAuthorization,
 } from "../../services/authorization.api";
+import {
+  getResultEntryDetails,
+  type ResultEntryDetails,
+} from "../../services/resultEntry.api";
 
 type Props = {
   onBack: () => void;
@@ -14,6 +19,7 @@ type Props = {
 };
 
 type ParameterRow = {
+  parameterId: string;
   parameter: string;
   category: string;
   machine: string;
@@ -21,36 +27,98 @@ type ParameterRow = {
   resultValue: string;
   referenceRange: string;
   authRange: string;
+  varyingRefRange: string;
   status: string;
 };
 
 const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
+  const requestSeq = useRef(0);
   const [submitting, setSubmitting] = useState(false);
-
-  const tests = authorization?.test_name
-    ? authorization.test_name.split(",").map((t) => t.trim()).filter(Boolean)
-    : [];
-
-  const [selectedTests, setSelectedTests] = useState<string[]>(tests);
-  const [activeTab, setActiveTab] = useState<string>(tests[0] ?? "");
-
-  const [parameters, setParameters] = useState<ParameterRow[]>([]);
   const [showApprovePopup, setShowApprovePopup] = useState(false);
+  const [details, setDetails] = useState<ResultEntryDetails | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(true);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
 
-  const handleParameterChange = (
-    index: number,
-    field: keyof ParameterRow,
-    value: string,
-  ) => {
-    const updated = [...parameters];
+  const tests = useMemo(
+    () =>
+      authorization?.test_name
+        ? authorization.test_name
+            .split(",")
+            .map((test) => test.trim())
+            .filter(Boolean)
+        : [],
+    [authorization?.test_name],
+  );
 
-    updated[index] = {
-      ...updated[index],
-      [field]: value,
-    };
+  const [selectedTests, setSelectedTests] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("");
 
-    setParameters(updated);
-  };
+  const loadDetails = useCallback(async () => {
+    if (!authorization?.result_entry) {
+      setDetailsError("Result entry link is missing for this authorization.");
+      setDetails(null);
+      setLoadingDetails(false);
+      return;
+    }
+
+    const seq = ++requestSeq.current;
+    setLoadingDetails(true);
+    setDetailsError(null);
+
+    try {
+      const response = await getResultEntryDetails(authorization.result_entry);
+      if (requestSeq.current === seq) {
+        setDetails(response);
+      }
+    } catch (error) {
+      if (requestSeq.current === seq) {
+        setDetailsError(
+          error instanceof Error ? error.message : "Failed to load authorization details",
+        );
+        setDetails(null);
+      }
+    } finally {
+      if (requestSeq.current === seq) {
+        setLoadingDetails(false);
+      }
+    }
+  }, [authorization?.result_entry]);
+
+  useEffect(() => {
+    void loadDetails();
+  }, [loadDetails]);
+
+  useEffect(() => {
+    setSelectedTests(tests);
+    setActiveTab(tests[0] ?? "");
+  }, [tests]);
+
+  const parameterRows = useMemo<ParameterRow[]>(() => {
+    const savedRows = new Map(
+      (details?.saved_result?.parameter_results ?? []).map((row) => [
+        row.parameter_code ?? row.parameter_name ?? "",
+        row,
+      ]),
+    );
+
+    return (details?.parameters ?? []).map((parameter) => {
+      const saved =
+        savedRows.get(parameter.parameter_code) ?? savedRows.get(parameter.parameter_name);
+
+      return {
+        parameterId: parameter.id,
+        parameter: parameter.parameter_name,
+        category: details?.patient.gender ?? "-",
+        machine: "Manual",
+        operator: saved?.operator ?? "=",
+        resultValue: saved?.value ?? "-",
+        referenceRange: `${parameter.min_ref ?? "-"} - ${parameter.max_ref ?? "-"} ${parameter.unit}`,
+        authRange: `${parameter.min_authz ?? "-"} - ${parameter.max_authz ?? "-"}`,
+        varyingRefRange: parameter.varying_reference_range ?? "-",
+        status: saved?.status?.join(", ") ?? "-",
+      };
+    });
+  }, [details]);
 
   const handleApprove = async () => {
     if (!authorization || submitting) return;
@@ -58,7 +126,6 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
     try {
       setSubmitting(true);
       await approveAuthorization(Number(authorization.id));
-
       toast.success("Approved Successfully");
       onBack();
     } catch (err) {
@@ -75,7 +142,6 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
     try {
       setSubmitting(true);
       await rejectAuthorization(Number(authorization.id));
-
       toast.success("Rejected Successfully");
       onBack();
     } catch (err) {
@@ -86,17 +152,59 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
     }
   };
 
+  const detailState = (title: string, message?: string) => (
+    <div className="authorization-detail-state">
+      <div className="authorization-detail-state-card">
+        <div className="authorization-detail-state-title">{title}</div>
+        {message && <p className="authorization-detail-state-copy">{message}</p>}
+        <button type="button" className="authorization-state-action" onClick={loadDetails}>
+          <FiRefreshCw />
+          Reload
+        </button>
+      </div>
+    </div>
+  );
+
+  if (loadingDetails && !details) {
+    return (
+      <div className="result-container">
+        <div className="result-header">
+          <button type="button" className="back-btn" onClick={onBack}>
+            <img src={backIcon} alt="back" className="back-icon" />
+          </button>
+          <h2>View Result Details</h2>
+        </div>
+        {detailState(
+          "Loading result details",
+          "We are fetching the patient and parameter configuration for this authorization.",
+        )}
+      </div>
+    );
+  }
+
+  if (detailsError && !details) {
+    return (
+      <div className="result-container">
+        <div className="result-header">
+          <button type="button" className="back-btn" onClick={onBack}>
+            <img src={backIcon} alt="back" className="back-icon" />
+          </button>
+          <h2>View Result Details</h2>
+        </div>
+        {detailState("Could not load result details", detailsError)}
+      </div>
+    );
+  }
+
   return (
     <div className="result-container">
-      {/* Top Header */}
       <div className="result-header">
-        <button className="back-btn" onClick={onBack}>
+        <button type="button" className="back-btn" onClick={onBack}>
           <img src={backIcon} alt="back" className="back-icon" />
         </button>
         <h2>View Result Details</h2>
       </div>
 
-      {/* Patient Info Card */}
       <div className="patient-card">
         <div className="patient-grid">
           <div>
@@ -132,8 +240,8 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
             <p>{authorization?.doctor_name ?? "-"}</p>
           </div>
           <div>
-            <label>Authorized By</label>
-            <p>{authorization?.authorized_by ?? "-"}</p>
+            <label>Authorization Status</label>
+            <p>{authorization?.authorization_status ?? "-"}</p>
           </div>
         </div>
       </div>
@@ -142,7 +250,6 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
         <div className="test-sidebar">
           {tests.length > 0 ? (
             <>
-              {/* SELECT ALL */}
               <div
                 className="test-item"
                 onClick={() => {
@@ -153,30 +260,25 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
                   }
                 }}
               >
-                <div className="checkbox">
-                  {selectedTests.length === tests.length && "✓"}
-                </div>
+                <div className="checkbox">{selectedTests.length === tests.length && "✓"}</div>
                 Select All
               </div>
 
-              {/* TEST LIST */}
               {tests.map((test) => {
                 const isSelected = selectedTests.includes(test);
-
                 return (
                   <div
                     key={test}
                     className={`test-item ${isSelected ? "active" : ""}`}
                     onClick={() => {
                       if (isSelected) {
-                        setSelectedTests(selectedTests.filter((t) => t !== test));
+                        setSelectedTests(selectedTests.filter((item) => item !== test));
                       } else {
                         setSelectedTests([...selectedTests, test]);
                       }
                     }}
                   >
                     <div className="checkbox">{isSelected && "✓"}</div>
-
                     {test}
                   </div>
                 );
@@ -187,14 +289,13 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
           )}
         </div>
 
-        {/* RIGHT SIDE */}
         <div className="table-section">
-          {/* Tabs */}
           {tests.length > 0 && (
             <div className="result-tabs">
               {tests.map((test) => (
                 <button
                   key={test}
+                  type="button"
                   className={activeTab === test ? "active" : ""}
                   onClick={() => setActiveTab(test)}
                 >
@@ -204,7 +305,6 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
             </div>
           )}
 
-          {/* TABLE */}
           <div className="table-scroll">
             <div className="result-table">
               <table>
@@ -217,65 +317,35 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
                     <th>Result Value</th>
                     <th>Reference Range</th>
                     <th>AuthZ Range</th>
+                    <th>Varying Ref. Range</th>
                     <th>Result Status</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {parameters.length > 0 ? (
-                    parameters.map((row, index) => (
-                      <tr key={index}>
+                  {parameterRows.length > 0 ? (
+                    parameterRows.map((row) => (
+                      <tr key={row.parameterId}>
                         <td>{row.parameter}</td>
                         <td>{row.category}</td>
                         <td>{row.machine}</td>
-
-                        {/* Operator Dropdown */}
-                        <td>
-                          <select
-                            className="table-select"
-                            value={row.operator}
-                            onChange={(e) =>
-                              handleParameterChange(
-                                index,
-                                "operator",
-                                e.target.value,
-                              )
-                            }
-                          >
-                            <option value="">Select</option>
-                            <option value="+">+</option>
-                            <option value="-">-</option>
-                          </select>
-                        </td>
-
-                        {/* Result Value */}
-                        <td>
-                          <input
-                            className="table-input"
-                            value={row.resultValue}
-                            onChange={(e) =>
-                              handleParameterChange(
-                                index,
-                                "resultValue",
-                                e.target.value,
-                              )
-                            }
-                          />
-                        </td>
-
+                        <td>{row.operator}</td>
+                        <td>{row.resultValue}</td>
                         <td>{row.referenceRange}</td>
                         <td>{row.authRange}</td>
-
+                        <td>{row.varyingRefRange}</td>
                         <td>
-                          <span className={`badge ${row.status.toLowerCase()}`}>
-                            {row.status}
-                          </span>
+                          {row.status !== "-" ? (
+                            <span className="badge normal">{row.status}</span>
+                          ) : (
+                            "-"
+                          )}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="empty-state">
+                      <td colSpan={9} className="empty-state">
                         No parameter data available
                       </td>
                     </tr>
@@ -285,27 +355,20 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
             </div>
           </div>
 
-          {/* BOTTOM SECTION */}
           <div className="bottom-section">
-
             <div className="note-section">
               <label>Suggestion Note :</label>
-              <p>
-                Hb Within Normal Range. Continue Routine Monitoring If Clinically Required.
-              </p>
+              <p>{details?.saved_result?.suggestion_note ?? details?.test?.suggestion_note ?? "-"}</p>
             </div>
 
             <div className="note-section">
               <label>Foot Note :</label>
-              <p>
-                Reference Ranges May Vary Depending On Age, Gender, And Clinical Condition.
-              </p>
+              <p>{details?.saved_result?.foot_note ?? details?.test?.disclaimer ?? "-"}</p>
             </div>
 
             {authorization?.authorization_status?.toUpperCase() !== "PENDING" && (
               <div className="status-section">
                 <label>Authorization Status :</label>
-
                 <span
                   className={
                     authorization?.authorization_status?.toUpperCase() === "APPROVED"
@@ -321,10 +384,10 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
             )}
           </div>
 
-          {/* BUTTONS ONLY FOR PENDING */}
           {authorization?.authorization_status?.toUpperCase() === "PENDING" && (
             <div className="authorize-btn-wrap">
               <button
+                type="button"
                 className="authorize-btn"
                 onClick={() => setShowApprovePopup(true)}
                 disabled={submitting}
@@ -333,6 +396,7 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
               </button>
 
               <button
+                type="button"
                 className="reject-btn"
                 onClick={handleReject}
                 disabled={submitting}
@@ -343,12 +407,11 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
           )}
         </div>
       </div>
+
       {showApprovePopup && (
         <div className="modal-overlay">
           <div className="confirm-modal">
-
             <h2>Authorize Result</h2>
-
             <p>
               Are you sure you want to Authorize
               <br />
@@ -356,8 +419,8 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
             </p>
 
             <div className="modal-actions">
-
               <button
+                type="button"
                 className="cancel-btn"
                 onClick={() => setShowApprovePopup(false)}
               >
@@ -365,6 +428,7 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
               </button>
 
               <button
+                type="button"
                 className="yes-btn"
                 onClick={async () => {
                   setShowApprovePopup(false);
@@ -373,7 +437,6 @@ const ResultDetails: React.FC<Props> = ({ onBack, authorization }) => {
               >
                 Yes
               </button>
-
             </div>
           </div>
         </div>

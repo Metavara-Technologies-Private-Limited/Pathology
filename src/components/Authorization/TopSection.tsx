@@ -36,6 +36,7 @@ const TopSection: React.FC<Props> = ({
       {/* Tabs */}
       <div className="tabs">
         <button
+          type="button"
           className={activeTab === "pending" ? "active" : ""}
           onClick={() => setActiveTab("pending")}
         >
@@ -43,6 +44,7 @@ const TopSection: React.FC<Props> = ({
         </button>
 
         <button
+          type="button"
           className={activeTab === "approved" ? "active" : ""}
           onClick={() => setActiveTab("approved")}
         >
@@ -50,6 +52,7 @@ const TopSection: React.FC<Props> = ({
         </button>
 
         <button
+          type="button"
           className={activeTab === "rejected" ? "active" : ""}
           onClick={() => setActiveTab("rejected")}
         >
