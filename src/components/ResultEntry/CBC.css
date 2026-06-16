@@ -144,6 +144,13 @@
 }
 .get-test-btn:hover { background: #f5f6fa; }
 
+.sidebar-empty {
+  padding: 8px 6px 12px;
+  font-size: 12px;
+  color: #8a92a3;
+  line-height: 1.4;
+}
+
 
 .cbc-main {
   flex: 1;
@@ -517,6 +524,51 @@
   display: flex;
   justify-content: flex-end;
   padding: 16px 24px;
+}
+
+.cbc-state-card {
+  margin: 24px;
+  min-height: 220px;
+  border: 1px solid #e7ebf1;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 28px;
+}
+
+.cbc-state-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.cbc-state-copy {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #6b7280;
+  max-width: 640px;
+}
+
+.state-retry-btn {
+  width: fit-content;
+  margin-top: 8px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: #111827;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.state-retry-btn:hover {
+  background: #1f2937;
 }
 
 

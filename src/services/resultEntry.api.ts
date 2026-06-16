@@ -121,6 +121,30 @@ export interface ResultEntryDetails {
     max_authz: number;
     varying_reference_range: string;
   }[];
+
+  templates?: {
+    id: string;
+    template_name: string;
+    template_text: string | null;
+    template_json: unknown | null;
+  }[];
+
+  saved_result?: {
+    parameter_results?: {
+      parameter_id?: string;
+      parameter_name?: string;
+      parameter_code?: string;
+      operator?: string;
+      value?: string;
+      status?: string[];
+      warn?: boolean;
+    }[];
+    suggestion_note?: string;
+    foot_note?: string;
+    referred_by?: string;
+    pathologist?: string;
+    selected_templates?: string[];
+  };
 }
 
 export const getResultEntryDetails = async (
@@ -129,4 +153,31 @@ export const getResultEntryDetails = async (
   const res = await http.get(`/result-entry/${resultId}/details/`);
 
   return res.data;
+};
+
+export interface SaveResultEntryDetailsPayload {
+  parameter_results: {
+    parameter_id?: string;
+    parameter_name?: string;
+    parameter_code?: string;
+    operator: string;
+    value: string;
+    status?: string[];
+    warn?: boolean;
+  }[];
+  suggestion_note?: string;
+  foot_note?: string;
+  referred_by?: string;
+  pathologist?: string;
+  selected_templates?: string[];
+  entered_by?: string;
+  result_status?: "Pending" | "Completed";
+  remarks?: string;
+}
+
+export const saveResultEntryDetails = async (
+  resultId: number,
+  payload: SaveResultEntryDetailsPayload,
+): Promise<void> => {
+  await http.put(`/result-entry/${resultId}/details/`, payload);
 };

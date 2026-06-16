@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useCallback, useEffect, useRef, useState } from "react";
 import "./CBC.css";
 // import { Result } from "./types";
 import { Result } from "./types";
@@ -9,8 +9,10 @@ import Ellipse_12 from "../../assets/icons/Ellipse_12.svg";
 import UndoIconAsset from "../../assets/icons/undo.png";
 import {
   getResultEntryDetails,
+  saveResultEntryDetails,
   ResultEntryDetails,
 } from "../../services/resultEntry.api";
+import { FiChevronDown, FiChevronUp, FiPrinter, FiX } from "react-icons/fi";
 
 interface Props {
   onBack: () => void;
@@ -23,19 +25,11 @@ interface SidebarItem {
   checked: boolean;
 }
 
-// const INITIAL_PARAMETERS: SidebarItem[] = [
-//   { label: "Select All", checked: false },
-//   { label: "HIV (Rapid Card)", checked: true },
-//   { label: "HCV (Rapid Card)", checked: true },
-//   { label: "HBaSG (Rapid Card)", checked: false },
-//   { label: "(CBC) Complete Bl...", checked: true },
-// ];
-
-const INITIAL_TEMPLATES: SidebarItem[] = [
-  { label: "Testosteron Total", checked: true },
-  { label: "VDRL (Rapid Card)", checked: false },
-  { label: "Blood Glucose (RBS)", checked: false },
-];
+interface TemplateItem {
+  id: string;
+  label: string;
+  checked: boolean;
+}
 
 const previousResults: Record<
   string,
@@ -62,15 +56,24 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
   const [isEdit, setIsEdit] = useState(initialMode === "edit");
   const [activeTab, setActiveTab] = useState("");
   const [modalParam, setModalParam] = useState<string | null>(null);
-  const [templates, setTemplates] = useState<SidebarItem[]>(INITIAL_TEMPLATES);
+  const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [details, setDetails] = useState<ResultEntryDetails | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(true);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const detailsRequestSeq = useRef(0);
+  const [tableData, setTableData] = useState<any[]>([]);
+  const [suggestionNote, setSuggestionNote] = useState("");
+  const [footNote, setFootNote] = useState("");
+  const [referredBy, setReferredBy] = useState("");
+  const [pathologist, setPathologist] = useState("");
   const parameters: SidebarItem[] = [
     {
       label: "Select All",
       checked: true,
     },
-    ...(details?.parameters?.map((p) => ({
-      label: p.parameter_name,
+    ...(details?.parameters?.map((parameter) => ({
+      label: parameter.parameter_name,
       checked: true,
     })) ?? []),
   ];
@@ -79,11 +82,88 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
     setIsEdit(initialMode === "edit");
   }, [initialMode]);
 
-  useEffect(() => {
+  const loadDetails = useCallback(async () => {
     if (!data?.id) return;
 
-    getResultEntryDetails(data.id).then(setDetails).catch(console.error);
+    const seq = ++detailsRequestSeq.current;
+    setLoadingDetails(true);
+    setDetailsError(null);
+
+    try {
+      const response = await getResultEntryDetails(data.id);
+      if (detailsRequestSeq.current === seq) {
+        setDetails(response);
+      }
+    } catch (error) {
+      if (detailsRequestSeq.current === seq) {
+        setDetailsError(
+          error instanceof Error ? error.message : "Failed to load result details",
+        );
+        setDetails(null);
+      }
+    } finally {
+      if (detailsRequestSeq.current === seq) {
+        setLoadingDetails(false);
+      }
+    }
   }, [data.id]);
+
+  useEffect(() => {
+    void loadDetails();
+  }, [loadDetails]);
+
+  useEffect(() => {
+    if (!details) return;
+
+    const savedRows = new Map(
+      (details.saved_result?.parameter_results ?? []).map((row) => [
+        row.parameter_code ?? row.parameter_name ?? "",
+        row,
+      ]),
+    );
+
+    setTableData(
+      (details.parameters ?? []).map((parameter) => {
+        const saved =
+          savedRows.get(parameter.parameter_code) ?? savedRows.get(parameter.parameter_name);
+
+        return {
+          parameter_id: parameter.id,
+          parameter_code: parameter.parameter_code,
+          param: parameter.parameter_name,
+          category: details.patient.gender,
+          type: "Manual",
+          operator: saved?.operator ?? "=",
+          value: saved?.value ?? "",
+          ref: `${parameter.min_ref ?? "-"} - ${parameter.max_ref ?? "-"} ${parameter.unit}`,
+          auth: `${parameter.min_authz ?? "-"} - ${parameter.max_authz ?? "-"}`,
+          varying: [
+            {
+              label: details.patient.gender,
+              val: parameter.varying_reference_range ?? "-",
+            },
+          ],
+          status: saved?.status ?? [],
+          warn: Boolean(saved?.warn),
+        };
+      }),
+    );
+
+    setTemplates(
+      (details.templates ?? []).map((template) => ({
+        id: template.id,
+        label: template.template_name,
+        checked: (details.saved_result?.selected_templates ?? []).includes(template.id),
+      })),
+    );
+
+    setSuggestionNote(
+      details.saved_result?.suggestion_note ?? details.test?.suggestion_note ?? "",
+    );
+    setFootNote(details.saved_result?.foot_note ?? details.test?.disclaimer ?? "");
+    setReferredBy(details.saved_result?.referred_by ?? "");
+    setPathologist(details.saved_result?.pathologist ?? "");
+  }, [details]);
 
   // const testTabs = [
   //   "HIV (Rapid Card)",
@@ -118,31 +198,35 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
     );
   };
 
-  const [tableData, setTableData] = useState<any[]>([]);
+  const handleSave = async () => {
+    if (!details?.result_entry?.id) return;
 
-  useEffect(() => {
-    if (!details?.parameters) return;
-
-    setTableData(
-      details.parameters.map((p) => ({
-        param: p.parameter_name,
-        category: details.patient.gender,
-        type: "Manual",
-        operator: "=",
-        value: "",
-        ref: `${p.min_ref} - ${p.max_ref} ${p.unit}`,
-        auth: `${p.min_authz} - ${p.max_authz}`,
-        varying: [
-          {
-            label: details.patient.gender,
-            val: p.varying_reference_range ?? "-",
-          },
-        ],
-        status: [],
-        warn: false,
-      })),
-    );
-  }, [details]);
+    setSaving(true);
+    try {
+      await saveResultEntryDetails(details.result_entry.id, {
+        parameter_results: tableData.map((row) => ({
+          parameter_id: row.parameter_id,
+          parameter_name: row.param,
+          parameter_code: row.parameter_code,
+          operator: row.operator ?? "=",
+          value: row.value ?? "",
+          status: row.status ?? [],
+          warn: Boolean(row.warn),
+        })),
+        suggestion_note: suggestionNote,
+        foot_note: footNote,
+        referred_by: referredBy,
+        pathologist,
+        selected_templates: templates.filter((template) => template.checked).map((template) => template.id),
+        result_status: "Completed",
+      });
+      setIsEdit(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to save result details");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const updateRow = (
     index: number,
@@ -171,6 +255,25 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
     }
   };
 
+  const loadShell = (message: string, detail?: string) => (
+    <div className={isEdit ? "cbc-edit-wrapper" : "cbc-view-wrapper"}>
+      <div className="cbc-header">
+        <button className="back-btn" onClick={onBack}>
+          <img src={UndoIconAsset} alt="Back" className="back-btn-icon" />
+        </button>
+        <h2>{isEdit ? "Add Result Details" : "View Result Details"}</h2>
+      </div>
+
+      <div className="cbc-state-card">
+        <div className="cbc-state-title">{message}</div>
+        {detail && <p className="cbc-state-copy">{detail}</p>}
+        <button className="state-retry-btn" onClick={loadDetails}>
+          Reload
+        </button>
+      </div>
+    </div>
+  );
+
   const PreviousModal = () => {
     const modalData = modalParam ? (previousResults[modalParam] ?? []) : [];
     return (
@@ -179,7 +282,7 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
           <div className="modal-header">
             <h3>Previous Result</h3>
             <button className="modal-close" onClick={() => setModalParam(null)}>
-              ✕
+              <FiX />
             </button>
           </div>
           <div className="modal-divider" />
@@ -205,6 +308,20 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
       </div>
     );
   };
+
+  if (loadingDetails && !details) {
+    return loadShell(
+      "Loading result details",
+      "We are fetching the patient and test configuration for this entry.",
+    );
+  }
+
+  if (detailsError && !details) {
+    return loadShell(
+      "Could not load result details",
+      detailsError,
+    );
+  }
 
   const renderRows = (editable: boolean) =>
     tableData.map((row, i) => (
@@ -239,6 +356,7 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
               />
               <div className="spinner-arrows">
                 <button
+                  type="button"
                   onClick={() =>
                     updateRow(
                       i,
@@ -246,10 +364,12 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
                       String((parseFloat(row.value) + 0.1).toFixed(1)),
                     )
                   }
+                  aria-label="Increase result value"
                 >
-                  ▲
+                  <FiChevronUp />
                 </button>
                 <button
+                  type="button"
                   onClick={() =>
                     updateRow(
                       i,
@@ -257,8 +377,9 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
                       String((parseFloat(row.value) - 0.1).toFixed(1)),
                     )
                   }
+                  aria-label="Decrease result value"
                 >
-                  ▼
+                  <FiChevronDown />
                 </button>
               </div>
             </div>
@@ -361,35 +482,43 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
         <div className="cbc-body">
           <div className="cbc-sidebar">
             <div className="sidebar-section-title">PARAMETER</div>
-            {parameters.map((p, i) => (
-              <label
-                key={i}
-                className="sidebar-item"
-                onClick={() => {}}
-                style={{ cursor: "pointer" }}
-              >
-                <span className={`sidebar-check ${p.checked ? "checked" : ""}`}>
-                  {p.checked && <span>✓</span>}
-                </span>
-                {p.label}
-              </label>
-            ))}
+            {parameters.length > 0 ? (
+              parameters.map((p, i) => (
+                <label
+                  key={i}
+                  className="sidebar-item"
+                  onClick={() => {}}
+                  style={{ cursor: "pointer" }}
+                >
+                  <span className={`sidebar-check ${p.checked ? "checked" : ""}`}>
+                    {p.checked && <span>✓</span>}
+                  </span>
+                  {p.label}
+                </label>
+              ))
+            ) : (
+              <div className="sidebar-empty">No parameters configured for this test.</div>
+            )}
             <div className="sidebar-section-title" style={{ marginTop: 20 }}>
               TEMPLATE
             </div>
-            {templates.map((t, i) => (
-              <label
-                key={i}
-                className="sidebar-item"
-                onClick={() => toggleTemplate(i)}
-                style={{ cursor: "pointer" }}
-              >
-                <span className={`sidebar-check ${t.checked ? "checked" : ""}`}>
-                  {t.checked && <span>✓</span>}
-                </span>
-                {t.label}
-              </label>
-            ))}
+            {templates.length > 0 ? (
+              templates.map((t, i) => (
+                <label
+                  key={i}
+                  className="sidebar-item"
+                  onClick={() => toggleTemplate(i)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <span className={`sidebar-check ${t.checked ? "checked" : ""}`}>
+                    {t.checked && <span>✓</span>}
+                  </span>
+                  {t.label}
+                </label>
+              ))
+            ) : (
+              <div className="sidebar-empty">No templates configured for this test.</div>
+            )}
             <button className="get-test-btn">Get Test</button>
           </div>
 
@@ -398,9 +527,7 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
               {testTabs.map((tab, i) => (
                 <button
                   key={i}
-                  className={`cbc-tab ${
-                    tab === "(CBC) Complete Blood Count" ? "active" : ""
-                  }`}
+                  className={`cbc-tab ${tab === details?.test?.test_name ? "active" : ""}`}
                   onClick={() => {
                     if (tab === "Y Chromosome Microdeletion") {
                       setActiveTab(tab);
@@ -435,25 +562,36 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
             <div className="cbc-notes-row">
               <div className="cbc-note-field">
                 <label>Suggestion Note</label>
-                <textarea defaultValue={details?.test?.suggestion_note ?? ""} />
+                <textarea
+                  value={suggestionNote}
+                  onChange={(e) => setSuggestionNote(e.target.value)}
+                />
               </div>
               <div className="cbc-note-field">
                 <label>Foot Note</label>
-                <textarea defaultValue={details?.test?.disclaimer ?? ""} />
+                <textarea
+                  value={footNote}
+                  onChange={(e) => setFootNote(e.target.value)}
+                />
               </div>
             </div>
 
             <div className="cbc-bottom-row">
               <div className="cbc-input-field">
                 <label>Referred By</label>
-                <input type="text" defaultValue="Dr. Soniya S." />
+                <input
+                  type="text"
+                  value={referredBy}
+                  onChange={(e) => setReferredBy(e.target.value)}
+                />
               </div>
               <div className="cbc-input-field">
                 <label>Pathologist</label>
                 <div className="select-wrap">
-                  <select defaultValue="John Wick">
-                    <option>John Wick</option>
-                    <option>Dr. Smith</option>
+                  <select value={pathologist} onChange={(e) => setPathologist(e.target.value)}>
+                    <option value="">Select pathologist</option>
+                    <option value="John Wick">John Wick</option>
+                    <option value="Dr. Smith">Dr. Smith</option>
                   </select>
                 </div>
               </div>
@@ -461,8 +599,8 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
                 <button className="cancel-btn" onClick={() => setIsEdit(false)}>
                   Cancel
                 </button>
-                <button className="save-btn" onClick={() => setIsEdit(false)}>
-                  Save
+                <button className="save-btn" onClick={() => void handleSave()} disabled={saving}>
+                  {saving ? "Saving..." : "Save"}
                 </button>
               </div>
             </div>
@@ -482,7 +620,7 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
         </button>
         <h2>View Result Details</h2>
         <button className="print-btn" style={{ marginLeft: "auto" }}>
-          🖨
+          <FiPrinter />
         </button>
       </div>
 
@@ -519,11 +657,11 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
           </div>
           <div className="pi-field">
             <span>Referred By</span>
-            <strong>Soniya</strong>
+            <strong>{referredBy || "—"}</strong>
           </div>
           <div className="pi-field">
             <span>Pathologist</span>
-            <strong>John Wick</strong>
+            <strong>{pathologist || "—"}</strong>
           </div>
         </div>
       </div>
@@ -532,7 +670,7 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
         {testTabs.map((tab, i) => (
           <button
             key={i}
-            className={`cbc-tab ${tab === "(CBC) Complete Blood Count" ? "active" : ""}`}
+            className={`cbc-tab ${tab === details?.test?.test_name ? "active" : ""}`}
             onClick={() => {
               if (tab === "Y Chromosome Microdeletion") {
                 setActiveTab(tab);
@@ -542,7 +680,9 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
             {tab}
           </button>
         ))}
-        <button className="print-btn tab-print">🖨</button>
+        <button className="print-btn tab-print" type="button">
+          <FiPrinter />
+        </button>
       </div>
 
       <div className="cbc-table-wrap">
@@ -568,17 +708,11 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
       <div className="cbc-footer-notes">
         <div>
           <span className="note-label">Suggestion Note :</span>
-          <p>
-            Hb Within Normal Range. Continue Routine Monitoring If Clinically
-            Required.
-          </p>
+          <p>{suggestionNote || "—"}</p>
         </div>
         <div>
           <span className="note-label">Foot Note :</span>
-          <p>
-            Reference Ranges May Vary Depending On Age, Gender, And Clinical
-            Condition.
-          </p>
+          <p>{footNote || "—"}</p>
         </div>
       </div>
 
@@ -592,3 +726,4 @@ const CBC: React.FC<Props> = ({ onBack, data, initialMode = "edit" }) => {
 };
 
 export default CBC;
+
